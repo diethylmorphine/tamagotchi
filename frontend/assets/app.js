@@ -79,6 +79,10 @@ async function run(action, quiet = false) {
   if (!quiet) status = action ? '…' : 'Загрузка…';
   sync();
   try {
+    if (!action && !quiet) {
+      const session = await request('/api/session');
+      $('#admin-panel').hidden = !session.is_admin;
+    }
     render(await request(action ? '/api/pet/actions' : '/api/pet', action ? 'POST' : 'GET', action ? {action} : undefined));
     status = action ? {feed: 'Сытость восстановлена', play: 'Настроение улучшилось', wash: 'Теперь чисто', rest: 'Энергия восстановлена'}[action] : '';
     if (action) {
@@ -118,6 +122,107 @@ dialog.addEventListener('cancel', event => { if (pet?.needs_name || busy) event.
 buttons.forEach(button => button.addEventListener('click', () => run(button.dataset.action)));
 $('#retry').addEventListener('click', () => run());
 $('.pet').addEventListener('animationend', () => $('.pet').classList.remove('react'));
+
+let adminPet = null;
+let adminBusy = false;
+let nextAfter = null;
+let adminStale = false;
+const adminKeys = ['level', ...Object.keys(labels)];
+for (const key of adminKeys) {
+  const label = document.createElement('label');
+  label.textContent = key === 'level' ? 'Уровень' : labels[key][0];
+  const input = document.createElement('input');
+  input.id = 'admin-' + key;
+  input.type = 'number';
+  input.min = key === 'level' ? '1' : '0';
+  input.max = key === 'level' ? '1000000' : '100';
+  input.step = key === 'level' ? '1' : '0.1';
+  input.required = true;
+  label.append(input);
+  $('#admin-fields').append(label);
+}
+function ownerLabel(value) {
+  return (value.owner_name || 'Имя ещё не получено') +
+    (value.owner_username ? ' (@' + value.owner_username + ')' : '') + ' · ID ' + value.telegram_id;
+}
+function editAdminPet(value) {
+  adminPet = value;
+  adminStale = false;
+  $('#admin-editor').hidden = false;
+  $('#admin-owner').textContent = ownerLabel(value);
+  $('#admin-pet-name').textContent = 'Питомец: ' + value.name;
+  for (const key of adminKeys) $('#admin-' + key).value = key === 'level' ? value.level : value.stats[key];
+}
+async function adminRun(work) {
+  if (adminBusy) return;
+  adminBusy = true;
+  $('#admin-message').textContent = 'Загрузка…';
+  $('#admin-panel').querySelectorAll('button, input').forEach(el => { el.disabled = true; });
+  try {
+    await work();
+  } catch (error) {
+    $('#admin-message').textContent = errorText(error);
+  } finally {
+    adminBusy = false;
+    $('#admin-panel').querySelectorAll('button, input').forEach(el => { el.disabled = false; });
+    $('#admin-save').disabled = adminStale;
+  }
+}
+async function loadAdminPet(id) {
+  editAdminPet(await request('/api/admin/pets/' + encodeURIComponent(id)));
+  $('#admin-message').textContent = '';
+}
+async function listAdminPets(after = '0') {
+  const result = await request('/api/admin/pets?after=' + encodeURIComponent(after));
+  $('#admin-users').replaceChildren();
+  for (const value of result.items) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = ownerLabel(value) + ' — ' + value.name + ' · ур. ' + value.level;
+    button.disabled = adminBusy;
+    button.addEventListener('click', () => adminRun(() => loadAdminPet(value.telegram_id)));
+    $('#admin-users').append(button);
+  }
+  nextAfter = result.next_after;
+  $('#admin-next').hidden = nextAfter === null;
+  $('#admin-message').textContent = result.items.length ? '' : 'Пользователей пока нет.';
+}
+$('#admin-panel').addEventListener('toggle', () => {
+  if ($('#admin-panel').open && !$('#admin-users').childElementCount) adminRun(() => listAdminPets());
+});
+$('#admin-list').addEventListener('click', () => adminRun(() => listAdminPets()));
+$('#admin-next').addEventListener('click', () => adminRun(() => listAdminPets(nextAfter)));
+$('#admin-search').addEventListener('submit', event => {
+  event.preventDefault();
+  adminRun(() => loadAdminPet($('#admin-user-id').value.trim()));
+});
+$('#admin-refresh').addEventListener('click', () => {
+  if (adminPet) adminRun(() => loadAdminPet(adminPet.telegram_id));
+});
+$('#admin-editor').addEventListener('submit', event => {
+  event.preventDefault();
+  if (!adminPet || adminStale) return;
+  const changes = {version: adminPet.version};
+  for (const key of adminKeys) {
+    const value = Number($('#admin-' + key).value);
+    const previous = key === 'level' ? adminPet.level : adminPet.stats[key];
+    if (value !== previous) changes[key] = value;
+  }
+  if (Object.keys(changes).length === 1) {
+    $('#admin-message').textContent = 'Нет изменений для сохранения.';
+    return;
+  }
+  adminRun(async () => {
+    // On any uncertain write result require a fresh read before another save.
+    adminStale = true;
+    try {
+      editAdminPet(await request('/api/admin/pets/' + adminPet.telegram_id, 'PATCH', changes));
+      $('#admin-message').textContent = 'Изменения сохранены.';
+    } catch (error) {
+      throw new Error(errorText(error) + ' Нажмите «Обновить данные» перед новым сохранением.');
+    }
+  });
+});
 setInterval(sync, 1000);
 if (telegram?.initData) {
   run();
@@ -126,4 +231,3 @@ if (telegram?.initData) {
   status = 'Открой игру через Telegram-бота.';
   sync();
 }
-

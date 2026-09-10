@@ -32,6 +32,23 @@
 </section>
 <p id="message" role="status" aria-live="polite">Загрузка…</p>
 <button id="retry" hidden>Обновить состояние</button>
+<details id="admin-panel" hidden>
+<summary>Администрирование</summary>
+<form id="admin-search">
+<label for="admin-user-id">Telegram ID пользователя</label>
+<div class="admin-toolbar"><input id="admin-user-id" inputmode="numeric" pattern="[1-9][0-9]*" required placeholder="123456789"><button>Найти</button></div>
+</form>
+<div class="admin-toolbar"><button type="button" id="admin-list">Все пользователи</button><button type="button" id="admin-next" hidden>Далее</button></div>
+<div id="admin-users" aria-label="Пользователи"></div>
+<form id="admin-editor" hidden>
+<h3 id="admin-owner"></h3>
+<p id="admin-pet-name"></p>
+<div id="admin-fields"></div>
+<p class="admin-hint">Уровень: 1–1 000 000. Показатели: 0–100. Опыт внутри уровня сохраняется.</p>
+<div class="admin-toolbar"><button id="admin-save">Сохранить</button><button type="button" id="admin-refresh">Обновить данные</button></div>
+</form>
+<p id="admin-message" role="status" aria-live="polite"></p>
+</details>
 <footer><span>✦</span><i></i><i></i><i></i><span>✦</span></footer>
 </main>
 <dialog id="name-dialog" aria-labelledby="dialog-title">

@@ -13,9 +13,9 @@ class Settings(BaseSettings):
     supabase_url: HttpUrl
     supabase_service_role_key: SecretStr
     init_data_ttl_seconds: int = Field(default=3600, ge=60, le=86400)
+    admin_telegram_ids: list[int] = Field(default_factory=list)
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

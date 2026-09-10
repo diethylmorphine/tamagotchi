@@ -6,15 +6,15 @@ from pathlib import Path
 import httpx
 from aiogram import Bot
 from aiogram.types import Update
-from fastapi import Depends, FastAPI, Header, HTTPException, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from backend.auth import telegram_user
+from backend.auth import admin_user, telegram_profile, telegram_user
 from backend.bot import dispatcher
 from backend.config import get_settings
-from backend.game import Action, GameError, act, present
+from backend.game import Action, GameError, act, evolve, present
 from backend.repository import PetRepository
 
 app = FastAPI(title="Tamagotchi-Fawn API", version="0.1.0")
@@ -41,6 +41,85 @@ async def game_error(_request, exc: GameError):
 async def repository():
     async with httpx.AsyncClient(timeout=10) as client:
         yield PetRepository(client)
+
+
+@app.get("/api/session")
+async def session(
+    response: Response,
+    profile=Depends(telegram_profile),
+    repo: PetRepository = Depends(repository),
+):
+    response.headers["Cache-Control"] = "no-store"
+    name = " ".join(part for part in (profile.first_name, profile.last_name) if part)
+    await repo.record_profile(profile.id, name, profile.username)
+    return {"is_admin": profile.id in get_settings().admin_telegram_ids}
+
+
+def admin_present(pet):
+    return {
+        **present(pet), "telegram_id": str(pet.telegram_id), "version": pet.version,
+        "owner_name": pet.owner_name, "owner_username": pet.owner_username,
+    }
+
+
+@app.get("/api/admin/pets", dependencies=[Depends(admin_user)])
+async def admin_pets(
+    response: Response,
+    after: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    repo: PetRepository = Depends(repository),
+):
+    response.headers["Cache-Control"] = "no-store"
+    rows = await repo.list_pets(after, limit + 1)
+    return {
+        "items": [admin_present(pet) for pet in rows[:limit]],
+        "next_after": str(rows[limit - 1].telegram_id) if len(rows) > limit else None,
+    }
+
+
+@app.get("/api/admin/pets/{user_id}", dependencies=[Depends(admin_user)])
+async def admin_get_pet(
+    user_id: int, response: Response, repo: PetRepository = Depends(repository),
+):
+    response.headers["Cache-Control"] = "no-store"
+    return admin_present(await repo.get(user_id))
+
+
+class AdminPetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: int = Field(ge=0, strict=True)
+    level: int | None = Field(default=None, ge=1, le=1_000_000, strict=True)
+    satiety: float | None = Field(default=None, ge=0, le=100, allow_inf_nan=False)
+    happiness: float | None = Field(default=None, ge=0, le=100, allow_inf_nan=False)
+    energy: float | None = Field(default=None, ge=0, le=100, allow_inf_nan=False)
+    hygiene: float | None = Field(default=None, ge=0, le=100, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_changes(self):
+        fields = self.model_fields_set - {"version"}
+        if not fields or any(getattr(self, field) is None for field in fields):
+            raise ValueError("Укажите уровень или показатели; пустые значения недопустимы")
+        return self
+
+
+@app.patch("/api/admin/pets/{user_id}", dependencies=[Depends(admin_user)])
+async def admin_update_pet(
+    user_id: int, body: AdminPetRequest, repo: PetRepository = Depends(repository),
+):
+    pet = await repo.get(user_id)
+    conflict = "Питомец уже обновился. Загрузите актуальное состояние перед сохранением"
+    if pet.version != body.version:
+        raise HTTPException(409, conflict)
+    changes = body.model_dump(exclude_unset=True, exclude={"version", "level"})
+    if body.level is not None:
+        changes["xp"] = (body.level - 1) * 100 + pet.xp % 100
+    updated = evolve(pet, datetime.now(UTC)).model_copy(update={
+        **changes, "version": pet.version + 1,
+    })
+    if not await repo.save(updated, previous_version=pet.version):
+        raise HTTPException(409, conflict)
+    return admin_present(updated)
 
 
 @app.get("/api/pet")

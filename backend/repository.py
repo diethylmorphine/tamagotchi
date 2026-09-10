@@ -45,7 +45,31 @@ class PetRepository:
             "PATCH",
             params={"telegram_id": f"eq.{pet.telegram_id}", "version": f"eq.{previous_version}"},
             headers={"Prefer": "return=representation"},
-            json=pet.model_dump(mode="json", exclude={"telegram_id"}),
+            json=pet.model_dump(
+                mode="json", exclude={"telegram_id", "owner_name", "owner_username"}
+            ),
         )
         return bool(response.json())
 
+    async def get(self, user_id: int) -> Pet:
+        response = await self.request(
+            "GET", params={"telegram_id": f"eq.{user_id}", "select": "*"}
+        )
+        rows = response.json()
+        if not rows:
+            raise HTTPException(404, "Питомец пользователя не найден")
+        return Pet.model_validate(rows[0])
+
+    async def list_pets(self, after: int, limit: int) -> list[Pet]:
+        response = await self.request("GET", params={
+            "select": "*", "telegram_id": f"gt.{after}",
+            "order": "telegram_id.asc", "limit": str(limit),
+        })
+        return [Pet.model_validate(row) for row in response.json()]
+
+    async def record_profile(self, user_id: int, name: str, username: str | None):
+        await self.get_or_create(user_id)
+        await self.request(
+            "PATCH", params={"telegram_id": f"eq.{user_id}"},
+            json={"owner_name": name, "owner_username": username},
+        )
