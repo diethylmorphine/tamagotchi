@@ -1,5 +1,5 @@
 [project]
-name = "telegram-tamagochi"
+name = "tamagotchi-fawn"
 version = "0.1.0"
 description = "Telegram Mini App with aiogram, FastAPI and Supabase"
 requires-python = ">=3.12"

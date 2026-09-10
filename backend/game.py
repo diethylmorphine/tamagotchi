@@ -15,7 +15,7 @@ class Action(StrEnum):
 
 class Pet(BaseModel):
     telegram_id: int
-    name: str = "Моти"
+    name: str = "Питомец"
     name_chosen: bool = False
     satiety: float = Field(default=80, ge=0, le=100)
     happiness: float = Field(default=80, ge=0, le=100)

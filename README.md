@@ -1,4 +1,4 @@
-# Моти — Telegram Tamagochi
+# Tamagotchi-Fawn | Tamagotchi FWN
 
 Скелет Telegram Mini App: **aiogram 3 + FastAPI + Supabase Postgres + Vercel**.
 Один проект и домен: FastAPI отдаёт HTML, API и принимает webhook Telegram.
@@ -64,8 +64,9 @@ Copy-Item .env.example .env
 
 1. Создать проект Supabase.
 2. Выполнить миграции из `supabase/migrations/` в порядке номера в SQL Editor.
-   Если `0001_pets.sql` уже выполнялся, запустить только `0002_pet_names.sql`.
-   Она добавляет выбор имени без сброса существующих питомцев.
+   Уже выполненные миграции повторять не нужно. `0002_pet_names.sql` добавляет выбор имени,
+   `0003_fawn_branding.sql` заменяет техническое имя у питомцев, которым игрок ещё не дал имя.
+   Выбранные игроками имена и прогресс сохраняются.
 3. Из настроек API скопировать URL проекта и **legacy `service_role` key** в
    `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY`.
 

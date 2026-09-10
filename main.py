@@ -17,7 +17,7 @@ from backend.config import get_settings
 from backend.game import Action, GameError, act, present
 from backend.repository import PetRepository
 
-app = FastAPI(title="Моти · Tamagochi API", version="0.1.0")
+app = FastAPI(title="Tamagotchi-Fawn API", version="0.1.0")
 FRONTEND = Path(__file__).parent / "frontend"
 app.mount("/assets", StaticFiles(directory=FRONTEND / "assets"), name="assets")
 

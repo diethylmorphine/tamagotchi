@@ -813,7 +813,7 @@ wheels = [
 ]
 
 [[package]]
-name = "telegram-tamagochi"
+name = "tamagotchi-fawn"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
