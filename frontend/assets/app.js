@@ -80,8 +80,13 @@ async function run(action, quiet = false) {
   sync();
   try {
     if (!action && !quiet) {
-      const session = await request('/api/session');
-      $('#admin-panel').hidden = !session.is_admin;
+      try {
+        const session = await request('/api/session');
+        $('#admin-panel').hidden = !session.is_admin;
+      } catch (error) {
+        // Profile sync is needed only for the admin panel and must not block the game.
+        console.warn('Admin session unavailable:', error);
+      }
     }
     render(await request(action ? '/api/pet/actions' : '/api/pet', action ? 'POST' : 'GET', action ? {action} : undefined));
     status = action ? {feed: 'Сытость восстановлена', play: 'Настроение улучшилось', wash: 'Теперь чисто', rest: 'Энергия восстановлена'}[action] : '';
