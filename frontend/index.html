@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f2e9">
+  <title>Моти · твой маленький друг</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script type="module" src="/assets/app.js"></script>
+</head>
+<body>
+  <main>
+    <header><span>МОТИ / MINI PET</span><span id="level">Уровень —</span></header>
+    <h1>Маленький друг.<br>Большая забота.</h1>
+    <section class="pet-card" aria-label="Твой питомец">
+      <div class="pet" aria-hidden="true">🐣</div>
+      <h2 id="name">Моти</h2>
+      <p id="xp">Твой питомец ждёт тебя</p>
+    </section>
+    <section id="stats" aria-label="Показатели питомца"></section>
+    <section class="actions" aria-label="Уход за питомцем">
+      <button data-action="feed" disabled>🍎 Покормить</button>
+      <button data-action="play" disabled>🎾 Поиграть</button>
+      <button data-action="wash" disabled>🫧 Искупать</button>
+      <button data-action="rest" disabled>🌙 Отдохнуть</button>
+    </section>
+    <p id="message" role="status" aria-live="polite">Подключаемся…</p>
+    <button id="retry" hidden>Повторить подключение</button>
+    <footer>Немного внимания каждый день.</footer>
+  </main>
+</body>
+</html>
+
