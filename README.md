@@ -22,6 +22,8 @@ supabase/migrations/0001_pets.sql # Таблица, ограничения и RL
 scripts/set_webhook.py           # Регистрация webhook и кнопки меню
 tests/                           # Авторизация, механика, API
 vercel.json                      # FastAPI preset
+pyproject.toml                   # Зависимости проекта и настройки инструментов
+uv.lock                          # Зафиксированные версии для сборки Vercel
 .env.example                     # Шаблон настроек
 ```
 
@@ -111,6 +113,12 @@ Webhook обрабатывается до ответа HTTP; long polling на V
 ID пользователя и показатели из тела запроса не принимаются.
 
 ## Проверки
+
+Vercel устанавливает зависимости из `pyproject.toml` и `uv.lock`.
+После изменения зависимостей обновить lock-файл командой `uv lock`.
+`requirements.txt` — экспорт для локального запуска через pip; обновлять его командой
+`uv export --no-dev --no-hashes --no-emit-project --output-file requirements.txt`.
+Для локальной установки через uv можно использовать `uv sync --locked`.
 
 ```powershell
 .\.venv\Scripts\python -m pytest

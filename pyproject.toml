@@ -1,3 +1,19 @@
+[project]
+name = "telegram-tamagochi"
+version = "0.1.0"
+description = "Telegram Mini App with aiogram, FastAPI and Supabase"
+requires-python = ">=3.12"
+dependencies = [
+    "aiogram>=3.31,<4",
+    "fastapi>=0.115,<1",
+    "httpx>=0.28,<1",
+    "pydantic-settings>=2.8,<3",
+    "uvicorn>=0.34,<1",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
