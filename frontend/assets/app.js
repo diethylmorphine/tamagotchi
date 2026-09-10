@@ -1,81 +1,129 @@
 const telegram = window.Telegram?.WebApp;
 telegram?.ready();
 telegram?.expand();
-
-const labels = { satiety: 'Сытость', happiness: 'Настроение', energy: 'Энергия', hygiene: 'Чистота' };
-const message = document.querySelector('#message');
+if (telegram?.isVersionAtLeast?.('6.1')) {
+  telegram.setHeaderColor('#0c0918');
+  telegram.setBackgroundColor('#0c0918');
+}
+const $ = selector => document.querySelector(selector);
+const labels = {satiety: ['Сытость', '#e9a95e'], happiness: ['Настроение', '#eb85cb'], energy: ['Энергия', '#a98af2'], hygiene: ['Чистота', '#6dd6e5']};
 const buttons = [...document.querySelectorAll('[data-action]')];
-const retry = document.querySelector('#retry');
+const dialog = $('#name-dialog');
 let busy = false;
-let loaded = false;
+let pet = null;
 let cooldownUntil = 0;
-
-for (const [key, label] of Object.entries(labels)) {
+let status = '';
+let failed = false;
+for (const [key, [label, color]] of Object.entries(labels)) {
   const stat = document.createElement('div');
-  stat.innerHTML = `<div class="stat-label"><label for="${key}">${label}</label><span id="${key}-value">—</span></div><progress id="${key}" max="100" value="0"></progress>`;
-  document.querySelector('#stats').append(stat);
+  stat.className = 'stat';
+  stat.style.setProperty('--stat-color', color);
+  stat.innerHTML = '<div class="stat-label"><label for="' + key + '">' + label + '</label><span id="' + key + '-value">—</span></div><div class="meter"><progress id="' + key + '" max="100" value="0"></progress></div>';
+  $('#stats').append(stat);
 }
-
-function syncButtons() {
-  const remaining = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
-  buttons.forEach(button => { button.disabled = busy || !loaded || remaining > 0; });
-  if (!busy && loaded && remaining > 0) message.textContent = `Следующее действие через ${remaining} сек.`;
-  else if (message.textContent.startsWith('Следующее действие')) message.textContent = 'Моти готов к заботе.';
+function sync() {
+  const seconds = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+  buttons.forEach(button => { button.disabled = busy || !pet || pet.needs_name || seconds > 0; });
+  $('#rename').disabled = busy || !pet;
+  $('#save-name').disabled = busy;
+  $('#cancel-name').disabled = busy;
+  $('#message').textContent = !failed && !busy && seconds > 0 ? 'Пауза · ' + seconds + ' сек.' : status;
 }
-
-function render(pet) {
-  document.querySelector('#name').textContent = pet.name;
-  document.querySelector('#level').textContent = `Уровень ${pet.level}`;
-  document.querySelector('#xp').textContent = `${pet.xp % 100} / 100 опыта до следующего уровня`;
+function openName() {
+  $('#dialog-caption').textContent = pet.needs_name ? 'NEW PET' : 'RENAME';
+  $('#dialog-title').textContent = pet.needs_name ? 'Как его назовём?' : 'Новое имя';
+  $('#pet-name').value = pet.needs_name ? '' : pet.name;
+  $('#cancel-name').hidden = pet.needs_name;
+  $('#name-error').textContent = '';
+  dialog.showModal();
+  $('#pet-name').focus();
+}
+function render(value) {
+  pet = value;
+  $('#name').textContent = pet.name;
+  $('#level').textContent = 'LVL ' + String(pet.level).padStart(2, '0');
+  $('#xp').textContent = 'XP ' + pet.xp % 100 + ' / 100';
+  $('#xp-bar').value = pet.xp % 100;
   for (const key of Object.keys(labels)) {
-    document.getElementById(key).value = pet.stats[key];
-    document.getElementById(`${key}-value`).textContent = Math.round(pet.stats[key]);
+    $('#' + key).value = pet.stats[key];
+    $('#' + key + '-value').textContent = Math.round(pet.stats[key]);
   }
   cooldownUntil = Date.now() + pet.cooldown_seconds * 1000;
-  loaded = true;
+  if (pet.needs_name && !dialog.open) openName();
 }
-
-async function request(path, body) {
+async function request(path, method = 'GET', body) {
   const response = await fetch(path, {
-    method: body ? 'POST' : 'GET',
-    headers: { Authorization: `tma ${telegram.initData}`, 'Content-Type': 'application/json' },
+    method,
+    headers: {Authorization: 'tma ' + telegram.initData, 'Content-Type': 'application/json'},
     body: body ? JSON.stringify(body) : undefined,
     signal: AbortSignal.timeout(20000),
   });
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    if (response.status === 401) loaded = false;
-    throw new Error(typeof data.detail === 'string' ? data.detail : 'Не удалось выполнить запрос');
+    if (response.status === 401) pet = null;
+    const detail = typeof data.detail === 'string' ? data.detail :
+      Array.isArray(data.detail) ? data.detail.map(item => item.msg.replace(/^Value error, /, '')).join('. ') :
+      'Сервер недоступен. Попробуйте ещё раз.';
+    throw new Error(detail);
   }
   return data;
 }
-
-async function run(action) {
-  if (busy) return;
-  busy = true;
-  retry.hidden = true;
-  syncButtons();
-  message.textContent = action ? 'Заботимся о Моти…' : 'Подключаемся…';
-  try {
-    render(await request(action ? '/api/pet/actions' : '/api/pet', action ? { action } : undefined));
-    message.textContent = action ? 'Моти рад твоей заботе!' : 'Привет! Как насчёт немного заботы?';
-    if (action) telegram.HapticFeedback?.notificationOccurred('success');
-  } catch (error) {
-    message.textContent = error.name === 'TimeoutError' ? 'Сервер не ответил. Обновите состояние.' : error.message;
-    // Never automatically retry a mutation after an uncertain network result.
-    retry.hidden = false;
-  } finally {
-    busy = false;
-    syncButtons();
-  }
+function errorText(error) {
+  return error.name === 'TimeoutError' ? 'Сервер не ответил. Обновите состояние.' : error.message;
 }
-
+async function run(action, quiet = false) {
+  if (busy || dialog.open) return;
+  busy = true;
+  failed = false;
+  $('#retry').hidden = true;
+  if (!quiet) status = action ? '…' : 'Загрузка…';
+  sync();
+  try {
+    render(await request(action ? '/api/pet/actions' : '/api/pet', action ? 'POST' : 'GET', action ? {action} : undefined));
+    status = action ? {feed: 'Сытость восстановлена', play: 'Настроение улучшилось', wash: 'Теперь чисто', rest: 'Энергия восстановлена'}[action] : '';
+    if (action) {
+      $('.pet').classList.remove('react');
+      requestAnimationFrame(() => $('.pet').classList.add('react'));
+      if (telegram.isVersionAtLeast?.('6.1')) telegram.HapticFeedback?.notificationOccurred('success');
+    }
+  } catch (error) {
+    failed = true;
+    status = errorText(error);
+    $('#retry').hidden = false;
+  } finally { busy = false; sync(); }
+}
+$('#name-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (busy) return;
+  const name = $('#pet-name').value.normalize('NFC').trim();
+  if (!name || [...name].length > 24 || /\p{C}/u.test(name)) {
+    $('#name-error').textContent = 'Введите имя от 1 до 24 символов без управляющих знаков.';
+    return;
+  }
+  busy = true;
+  $('#name-error').textContent = '';
+  sync();
+  try {
+    render(await request('/api/pet/name', 'PATCH', {name}));
+    dialog.close();
+    status = 'Имя сохранено';
+    failed = false;
+  } catch (error) {
+    $('#name-error').textContent = errorText(error);
+  } finally { busy = false; sync(); }
+});
+$('#rename').addEventListener('click', openName);
+$('#cancel-name').addEventListener('click', () => dialog.close());
+dialog.addEventListener('cancel', event => { if (pet?.needs_name || busy) event.preventDefault(); });
 buttons.forEach(button => button.addEventListener('click', () => run(button.dataset.action)));
-retry.addEventListener('click', () => run());
-setInterval(syncButtons, 1000);
+$('#retry').addEventListener('click', () => run());
+$('.pet').addEventListener('animationend', () => $('.pet').classList.remove('react'));
+setInterval(sync, 1000);
 if (telegram?.initData) {
   run();
-  setInterval(() => { if (!document.hidden && !busy) run(); }, 60000);
+  setInterval(() => { if (!document.hidden && !busy && !dialog.open) run(undefined, true); }, 60000);
 } else {
-  message.textContent = 'Открой игру кнопкой «Открыть питомца» в Telegram-боте.';
+  status = 'Открой игру через Telegram-бота.';
+  sync();
 }
+

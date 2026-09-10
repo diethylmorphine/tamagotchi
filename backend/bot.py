@@ -13,7 +13,7 @@ async def start(message: Message):
         await message.answer("Открой личный чат со мной, чтобы завести питомца.")
         return
     await message.answer(
-        "Твой Моти ждёт! Корми, играй, купай и помогай ему отдыхать 🐣",
+        "Твой тамагочи здесь. Открой игру, чтобы выбрать имя и начать.",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(
                 text="Открыть питомца",
@@ -25,4 +25,3 @@ async def start(message: Message):
 
 dispatcher = Dispatcher(disable_fsm=True)
 dispatcher.include_router(router)
-

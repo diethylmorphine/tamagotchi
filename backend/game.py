@@ -16,6 +16,7 @@ class Action(StrEnum):
 class Pet(BaseModel):
     telegram_id: int
     name: str = "Моти"
+    name_chosen: bool = False
     satiety: float = Field(default=80, ge=0, le=100)
     happiness: float = Field(default=80, ge=0, le=100)
     energy: float = Field(default=80, ge=0, le=100)
@@ -82,9 +83,9 @@ def present(pet: Pet, now: datetime | None = None) -> dict:
         remaining = max(0, COOLDOWN_SECONDS - (now - current.last_action_at).total_seconds())
     return {
         "name": current.name,
+        "needs_name": not current.name_chosen,
         "stats": {stat: round(getattr(current, stat), 1) for stat in DECAY_PER_HOUR},
         "xp": current.xp,
         "level": 1 + current.xp // 100,
         "cooldown_seconds": remaining,
     }
-

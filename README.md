@@ -63,7 +63,9 @@ Copy-Item .env.example .env
 ## Supabase
 
 1. Создать проект Supabase.
-2. Выполнить `supabase/migrations/0001_pets.sql` в SQL Editor один раз.
+2. Выполнить миграции из `supabase/migrations/` в порядке номера в SQL Editor.
+   Если `0001_pets.sql` уже выполнялся, запустить только `0002_pet_names.sql`.
+   Она добавляет выбор имени без сброса существующих питомцев.
 3. Из настроек API скопировать URL проекта и **legacy `service_role` key** в
    `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY`.
 
@@ -107,6 +109,7 @@ Webhook обрабатывается до ответа HTTP; long polling на V
 | GET | `/api/health` | Проверка процесса |
 | GET | `/api/pet` | Создать при первом входе / получить питомца |
 | POST | `/api/pet/actions` | `{"action":"feed"}`; также `play`, `wash`, `rest` |
+| PATCH | `/api/pet/name` | `{"name":"Пиксель"}` — первое имя или переименование, 1–24 символа |
 | POST | `/api/telegram/webhook` | Обновления Telegram с секретным заголовком |
 
 Игровые запросы: `Authorization: tma <Telegram.WebApp.initData>`.
@@ -132,7 +135,7 @@ Vercel устанавливает зависимости из `pyproject.toml` �
 
 ## Следующие этапы
 
-- Выбор имени и вида питомца, спрайты и анимации.
+- Выбор вида питомца и дополнительные спрайты.
 - Инвентарь, магазин, задания и баланс экономики.
 - Сон по времени, уведомления отдельным запланированным заданием.
 - Журнал действий и ключи идемпотентности перед добавлением покупок/валюты.

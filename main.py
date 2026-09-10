@@ -1,4 +1,5 @@
 import secrets
+import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -8,7 +9,7 @@ from aiogram.types import Update
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from backend.auth import telegram_user
 from backend.bot import dispatcher
@@ -56,6 +57,36 @@ class ActionRequest(BaseModel):
     action: Action
 
 
+class NameRequest(BaseModel):
+    name: str
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        value = unicodedata.normalize("NFC", value).strip()
+        if not 1 <= len(value) <= 24:
+            raise ValueError("Имя должно содержать от 1 до 24 символов")
+        if any(unicodedata.category(char).startswith("C") for char in value):
+            raise ValueError("В имени недопустимы управляющие символы")
+        return value
+
+
+@app.patch("/api/pet/name")
+async def rename_pet(
+    body: NameRequest,
+    user_id: int = Depends(telegram_user),
+    repo: PetRepository = Depends(repository),
+):
+    for _ in range(3):
+        pet = await repo.get_or_create(user_id)
+        updated = pet.model_copy(update={
+            "name": body.name, "name_chosen": True, "version": pet.version + 1,
+        })
+        if await repo.save(updated, previous_version=pet.version):
+            return present(updated)
+    raise HTTPException(409, "Питомец уже обновился. Повторите сохранение")
+
+
 @app.post("/api/pet/actions")
 async def pet_action(
     body: ActionRequest,
@@ -84,4 +115,3 @@ async def telegram_webhook(
     async with Bot(token=settings.bot_token.get_secret_value()) as bot:
         await dispatcher.feed_update(bot, update)
     return {"ok": True}
-

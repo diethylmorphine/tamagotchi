@@ -1,34 +1,50 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f5f2e9">
-  <title>Моти · твой маленький друг</title>
-  <link rel="stylesheet" href="/assets/style.css">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script type="module" src="/assets/app.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0918">
+<title>Tamagotchi</title>
+<link rel="stylesheet" href="/assets/style.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script type="module" src="/assets/app.js"></script>
 </head>
 <body>
-  <main>
-    <header><span>МОТИ / MINI PET</span><span id="level">Уровень —</span></header>
-    <h1>Маленький друг.<br>Большая забота.</h1>
-    <section class="pet-card" aria-label="Твой питомец">
-      <div class="pet" aria-hidden="true">🐣</div>
-      <h2 id="name">Моти</h2>
-      <p id="xp">Твой питомец ждёт тебя</p>
-    </section>
-    <section id="stats" aria-label="Показатели питомца"></section>
-    <section class="actions" aria-label="Уход за питомцем">
-      <button data-action="feed" disabled>🍎 Покормить</button>
-      <button data-action="play" disabled>🎾 Поиграть</button>
-      <button data-action="wash" disabled>🫧 Искупать</button>
-      <button data-action="rest" disabled>🌙 Отдохнуть</button>
-    </section>
-    <p id="message" role="status" aria-live="polite">Подключаемся…</p>
-    <button id="retry" hidden>Повторить подключение</button>
-    <footer>Немного внимания каждый день.</footer>
-  </main>
+<main class="device">
+<header><span class="brand"><span class="pixel-mark">✦</span> TAMAGOTCHI</span><span class="led" aria-label="Питание"></span></header>
+<section class="screen">
+<div class="screen-top"><span>VIRTUAL PET / 01</span><span id="level">LVL —</span></div>
+<div class="name-row"><h1 id="name">···</h1><button id="rename" aria-label="Переименовать питомца" disabled>✎</button></div>
+<div class="habitat">
+<span class="star s1">✦</span><span class="star s2">+</span><span class="star s3">✧</span><span class="star s4">+</span>
+<div class="orbit"></div>
+<img class="pet" src="/assets/pet.svg" alt="Фиолетовый пиксельный кот" width="220" height="220">
+<div class="pet-shadow"></div><div class="floor"></div>
+</div>
+<div class="experience"><span id="xp">XP — / 100</span><progress id="xp-bar" max="100" value="0" aria-label="Опыт"></progress></div>
+<section id="stats" aria-label="Показатели питомца"></section>
+</section>
+<section class="actions" aria-label="Уход за питомцем">
+<button data-action="feed" disabled><span class="action-icon">♥</span><span>Кормить</span></button>
+<button data-action="play" disabled><span class="action-icon">✚</span><span>Играть</span></button>
+<button data-action="wash" disabled><span class="action-icon">◈</span><span>Купать</span></button>
+<button data-action="rest" disabled><span class="action-icon">☾</span><span>Спать</span></button>
+</section>
+<p id="message" role="status" aria-live="polite">Загрузка…</p>
+<button id="retry" hidden>Обновить состояние</button>
+<footer><span>✦</span><i></i><i></i><i></i><span>✦</span></footer>
+</main>
+<dialog id="name-dialog" aria-labelledby="dialog-title">
+<form id="name-form">
+<span class="dialog-icon">✦</span>
+<p class="eyebrow" id="dialog-caption">NEW PET</p>
+<h2 id="dialog-title">Как его назовём?</h2>
+<label for="pet-name">Имя питомца</label>
+<input id="pet-name" name="name" maxlength="24" required autocomplete="off" placeholder="Например, Пиксель">
+<p id="name-error" role="alert"></p>
+<button type="submit" id="save-name">Сохранить</button>
+<button type="button" id="cancel-name">Отмена</button>
+</form>
+</dialog>
 </body>
 </html>
-
