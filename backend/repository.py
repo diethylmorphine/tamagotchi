@@ -67,6 +67,12 @@ class PetRepository:
         })
         return [Pet.model_validate(row) for row in response.json()]
 
+    async def top_pets(self) -> list[dict]:
+        response = await self.request("GET", params={
+            "select": "name,xp", "order": "xp.desc,telegram_id.asc", "limit": "5",
+        })
+        return response.json()
+
     async def record_profile(self, user_id: int, name: str, username: str | None):
         await self.get_or_create(user_id)
         await self.request(

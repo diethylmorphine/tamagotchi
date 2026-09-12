@@ -11,7 +11,7 @@
 </head>
 <body>
 <main class="device">
-<header><span class="brand"><span class="pixel-mark">✦</span> Tamagotchi FWN</span><span class="led" aria-label="Питание"></span></header>
+<header><span class="brand"><span class="pixel-mark">✦</span> Tamagotchi FWN</span><button id="leaderboard-open" type="button" aria-label="Таблица лидеров" aria-haspopup="dialog" disabled><span aria-hidden="true">🏆</span> Топ-5</button></header>
 <section class="screen">
 <div class="screen-top"><span>VIRTUAL PET / 01</span><span id="level">LVL —</span></div>
 <div class="name-row"><h1 id="name">···</h1><button id="rename" aria-label="Переименовать питомца" disabled>✎</button></div>
@@ -51,6 +51,23 @@
 </details>
 <footer><span>✦</span><i></i><i></i><i></i><span>✦</span></footer>
 </main>
+<dialog id="sleep-dialog" aria-labelledby="sleep-title" aria-describedby="sleep-description">
+<span class="dialog-icon">☾</span>
+<h2 id="sleep-title">Уложить спать?</h2>
+<p id="sleep-description">Сон длится 30 минут. На это время кнопки ухода будут заблокированы — разбудить питомца раньше нельзя. Во сне показатели падают в 4 раза медленнее, а каждые 10 минут восстанавливается 8 единиц энергии.</p>
+<button type="button" id="confirm-sleep">Спать 30 минут</button>
+<button type="button" id="cancel-sleep" autofocus>Отмена</button>
+</dialog>
+<dialog id="leaderboard-dialog" aria-labelledby="leaderboard-title" aria-describedby="leaderboard-description">
+<span class="dialog-icon" aria-hidden="true">🏆</span>
+<p class="eyebrow">TOP 5</p>
+<h2 id="leaderboard-title">Таблица лидеров</h2>
+<p id="leaderboard-description">Самые прокачанные питомцы по общему опыту</p>
+<ol id="leaderboard-list" aria-label="Лучшие питомцы"></ol>
+<p id="leaderboard-message" role="status" aria-live="polite"></p>
+<button type="button" id="leaderboard-retry" hidden>Попробовать снова</button>
+<form method="dialog"><button id="leaderboard-close">Закрыть</button></form>
+</dialog>
 <dialog id="name-dialog" aria-labelledby="dialog-title">
 <form id="name-form">
 <span class="dialog-icon">✦</span>

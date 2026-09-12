@@ -132,6 +132,15 @@ async def get_pet(
     return present(await repo.get_or_create(user_id))
 
 
+@app.get("/api/leaderboard", dependencies=[Depends(telegram_user)])
+async def leaderboard(response: Response, repo: PetRepository = Depends(repository)):
+    response.headers["Cache-Control"] = "no-store"
+    return {"items": [
+        {"name": pet["name"], "xp": pet["xp"], "level": 1 + pet["xp"] // 100}
+        for pet in await repo.top_pets()
+    ]}
+
+
 class ActionRequest(BaseModel):
     action: Action
 

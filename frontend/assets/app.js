@@ -9,9 +9,12 @@ const $ = selector => document.querySelector(selector);
 const labels = {satiety: ['Сытость', '#e9a95e'], happiness: ['Настроение', '#eb85cb'], energy: ['Энергия', '#a98af2'], hygiene: ['Чистота', '#6dd6e5']};
 const buttons = [...document.querySelectorAll('[data-action]')];
 const dialog = $('#name-dialog');
+const leaderboardDialog = $('#leaderboard-dialog');
+const sleepDialog = $('#sleep-dialog');
 let busy = false;
 let pet = null;
 let cooldownUntil = 0;
+let sleepUntil = 0;
 let status = '';
 let failed = false;
 for (const [key, [label, color]] of Object.entries(labels)) {
@@ -23,11 +26,15 @@ for (const [key, [label, color]] of Object.entries(labels)) {
 }
 function sync() {
   const seconds = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+  const sleeping = Math.max(0, Math.ceil((sleepUntil - Date.now()) / 1000));
   buttons.forEach(button => { button.disabled = busy || !pet || pet.needs_name || seconds > 0; });
-  $('#rename').disabled = busy || !pet;
+  $('#rename').disabled = busy || !pet || sleeping > 0;
   $('#save-name').disabled = busy;
+  $('#leaderboard-open').disabled = !telegram?.initData;
   $('#cancel-name').disabled = busy;
-  $('#message').textContent = !failed && !busy && seconds > 0 ? 'Пауза · ' + seconds + ' сек.' : status;
+  $('#message').textContent = !failed && !busy && sleeping > 0
+    ? 'Спит · ' + Math.floor(sleeping / 60) + ':' + String(sleeping % 60).padStart(2, '0') + ' · +8 энергии каждые 10 мин.'
+    : !failed && !busy && seconds > 0 ? 'Пауза · ' + seconds + ' сек.' : status;
 }
 function openName() {
   $('#dialog-caption').textContent = pet.needs_name ? 'NEW PET' : 'RENAME';
@@ -49,6 +56,7 @@ function render(value) {
     $('#' + key + '-value').textContent = Math.round(pet.stats[key]);
   }
   cooldownUntil = Date.now() + pet.cooldown_seconds * 1000;
+  sleepUntil = Date.now() + (pet.sleep_remaining_seconds || 0) * 1000;
   if (pet.needs_name && !dialog.open) openName();
 }
 async function request(path, method = 'GET', body) {
@@ -71,8 +79,43 @@ async function request(path, method = 'GET', body) {
 function errorText(error) {
   return error.name === 'TimeoutError' ? 'Сервер не ответил. Обновите состояние.' : error.message;
 }
+let leaderboardBusy = false;
+async function loadLeaderboard() {
+  if (leaderboardBusy) return;
+  leaderboardBusy = true;
+  $('#leaderboard-list').replaceChildren();
+  $('#leaderboard-message').textContent = 'Загрузка…';
+  $('#leaderboard-retry').hidden = true;
+  try {
+    const result = await request('/api/leaderboard');
+    for (const [index, value] of result.items.entries()) {
+      const row = document.createElement('li');
+      const rank = document.createElement('span');
+      rank.className = 'leaderboard-rank';
+      rank.textContent = String(index + 1).padStart(2, '0');
+      const info = document.createElement('div');
+      const name = document.createElement('strong');
+      name.textContent = value.name;
+      const progress = document.createElement('span');
+      progress.textContent = 'Уровень ' + value.level + ' · ' + value.xp + ' XP';
+      info.append(name, progress);
+      row.append(rank, info);
+      $('#leaderboard-list').append(row);
+    }
+    $('#leaderboard-message').textContent = result.items.length ? '' : 'Питомцев пока нет. Стань первым!';
+  } catch (error) {
+    $('#leaderboard-message').textContent = errorText(error);
+    $('#leaderboard-retry').hidden = false;
+  } finally { leaderboardBusy = false; }
+}
+$('#leaderboard-open').addEventListener('click', () => {
+  leaderboardDialog.showModal();
+  loadLeaderboard();
+});
+$('#leaderboard-retry').addEventListener('click', loadLeaderboard);
 async function run(action, quiet = false) {
-  if (busy || dialog.open) return;
+  if (leaderboardDialog.open) return;
+  if (busy || dialog.open || sleepDialog.open) return;
   busy = true;
   failed = false;
   $('#retry').hidden = true;
@@ -89,7 +132,7 @@ async function run(action, quiet = false) {
       }
     }
     render(await request(action ? '/api/pet/actions' : '/api/pet', action ? 'POST' : 'GET', action ? {action} : undefined));
-    status = action ? {feed: 'Сытость восстановлена', play: 'Настроение улучшилось', wash: 'Теперь чисто', rest: 'Энергия восстановлена'}[action] : '';
+    status = action ? {feed: 'Сытость восстановлена', play: 'Настроение улучшилось', wash: 'Теперь чисто', rest: ''}[action] : '';
     if (action) {
       $('.pet').classList.remove('react');
       requestAnimationFrame(() => $('.pet').classList.add('react'));
@@ -124,7 +167,15 @@ $('#name-form').addEventListener('submit', async event => {
 $('#rename').addEventListener('click', openName);
 $('#cancel-name').addEventListener('click', () => dialog.close());
 dialog.addEventListener('cancel', event => { if (pet?.needs_name || busy) event.preventDefault(); });
-buttons.forEach(button => button.addEventListener('click', () => run(button.dataset.action)));
+buttons.forEach(button => button.addEventListener('click', () => {
+  if (button.dataset.action === 'rest') sleepDialog.showModal();
+  else run(button.dataset.action);
+}));
+$('#cancel-sleep').addEventListener('click', () => sleepDialog.close());
+$('#confirm-sleep').addEventListener('click', () => {
+  sleepDialog.close();
+  run('rest');
+});
 $('#retry').addEventListener('click', () => run());
 $('.pet').addEventListener('animationend', () => $('.pet').classList.remove('react'));
 
