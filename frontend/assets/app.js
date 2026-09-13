@@ -27,13 +27,18 @@ for (const [key, [label, color]] of Object.entries(labels)) {
 function sync() {
   const seconds = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
   const sleeping = Math.max(0, Math.ceil((sleepUntil - Date.now()) / 1000));
-  buttons.forEach(button => { button.disabled = busy || !pet || pet.needs_name || seconds > 0; });
+  buttons.forEach(button => {
+    const wake = button.dataset.action === 'rest' && pet?.can_wake && sleeping > 0;
+    button.disabled = busy || !pet || pet.needs_name || (seconds > 0 && !wake);
+    if (button.dataset.action === 'rest') button.lastElementChild.textContent = wake ? 'Разбудить' : 'Спать';
+  });
   $('#rename').disabled = busy || !pet || sleeping > 0;
   $('#save-name').disabled = busy;
   $('#leaderboard-open').disabled = !telegram?.initData;
   $('#cancel-name').disabled = busy;
   $('#message').textContent = !failed && !busy && sleeping > 0
-    ? 'Спит · ' + Math.floor(sleeping / 60) + ':' + String(sleeping % 60).padStart(2, '0') + ' · +8 энергии каждые 10 мин.'
+    ? pet.can_wake ? 'Энергия полная — питомец выспался, можно разбудить!'
+      : 'Спит · ' + Math.floor(sleeping / 60) + ':' + String(sleeping % 60).padStart(2, '0') + ' · +8 энергии каждые 10 мин.'
     : !failed && !busy && seconds > 0 ? 'Пауза · ' + seconds + ' сек.' : status;
 }
 function openName() {
@@ -132,7 +137,7 @@ async function run(action, quiet = false) {
       }
     }
     render(await request(action ? '/api/pet/actions' : '/api/pet', action ? 'POST' : 'GET', action ? {action} : undefined));
-    status = action ? {feed: 'Сытость восстановлена', play: 'Настроение улучшилось', wash: 'Теперь чисто', rest: ''}[action] : '';
+    status = action ? {feed: 'Сытость восстановлена', play: 'Настроение улучшилось', wash: 'Теперь чисто', rest: '', wake: 'Питомец проснулся!'}[action] : '';
     if (action) {
       $('.pet').classList.remove('react');
       requestAnimationFrame(() => $('.pet').classList.add('react'));
@@ -168,7 +173,8 @@ $('#rename').addEventListener('click', openName);
 $('#cancel-name').addEventListener('click', () => dialog.close());
 dialog.addEventListener('cancel', event => { if (pet?.needs_name || busy) event.preventDefault(); });
 buttons.forEach(button => button.addEventListener('click', () => {
-  if (button.dataset.action === 'rest') sleepDialog.showModal();
+  if (button.dataset.action === 'rest' && pet?.can_wake && sleepUntil > Date.now()) run('wake');
+  else if (button.dataset.action === 'rest') sleepDialog.showModal();
   else run(button.dataset.action);
 }));
 $('#cancel-sleep').addEventListener('click', () => sleepDialog.close());

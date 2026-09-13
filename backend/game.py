@@ -11,6 +11,7 @@ class Action(StrEnum):
     play = "play"
     wash = "wash"
     rest = "rest"
+    wake = "wake"
 
 
 class Pet(BaseModel):
@@ -61,7 +62,10 @@ def evolve(pet: Pet, now: datetime) -> Pet:
         asleep = max(0, (min(until, wake) - max(cursor, start)).total_seconds()) if start else 0
         hours = (seconds - asleep + asleep / 4) / 3600
         for stat, rate in DECAY_PER_HOUR.items():
-            updates[stat] = max(0, updates[stat] - rate * hours)
+            stat_hours = (
+                (seconds - asleep) / 3600 if stat == "energy" and updates[stat] == 100 else hours
+            )
+            updates[stat] = max(0, updates[stat] - rate * stat_hours)
         cursor = until
 
     # Apply each reward at its actual time so caps and later decay remain correct.
@@ -82,11 +86,19 @@ def sleep_remaining(pet: Pet, now: datetime) -> float:
 
 
 def act(pet: Pet, action: Action, now: datetime) -> Pet:
+    current = evolve(pet, now)
+    if action == Action.wake:
+        if sleep_remaining(current, now) <= 0:
+            raise GameError("Питомец уже не спит")
+        if current.energy < 100:
+            raise GameError("Питомец ещё спит: дождитесь полной энергии")
+        return current.model_copy(update={
+            "sleep_started_at": None, "version": pet.version + 1, "last_action_at": now,
+        })
     if sleep_remaining(pet, now) > 0:
         raise GameError("Питомец спит: действия будут доступны после 30 минут сна")
     if pet.last_action_at and (now - pet.last_action_at).total_seconds() < COOLDOWN_SECONDS:
         raise GameError("Питомцу нужна пауза: между действиями 10 секунд", 429)
-    current = evolve(pet, now)
     if action == Action.play and current.energy < 15:
         raise GameError("Сначала нужно отдохнуть")
     effects = REWARDS[action]
@@ -122,4 +134,5 @@ def present(pet: Pet, now: datetime | None = None) -> dict:
         "level": 1 + current.xp // 100,
         "cooldown_seconds": max(remaining, sleeping_seconds),
         "sleep_remaining_seconds": sleeping_seconds,
+        "can_wake": sleeping_seconds > 0 and current.energy >= 100,
     }

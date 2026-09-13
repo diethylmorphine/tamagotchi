@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     supabase_service_role_key: SecretStr
     init_data_ttl_seconds: int = Field(default=3600, ge=60, le=86400)
     admin_telegram_ids: list[int] = Field(default_factory=list)
+    cron_secret: SecretStr | None = Field(default=None, min_length=32)
 
 
 @lru_cache

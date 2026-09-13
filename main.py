@@ -12,9 +12,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from backend.auth import admin_user, telegram_profile, telegram_user
-from backend.bot import dispatcher
+from backend.bot import dispatcher, pet_keyboard
 from backend.config import get_settings
 from backend.game import Action, GameError, act, evolve, present
+from backend.reminders import ReminderRepository, send_reminders
 from backend.repository import PetRepository
 
 app = FastAPI(title="Tamagotchi-Fawn API", version="0.1.0")
@@ -30,6 +31,18 @@ async def index():
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.post("/api/cron/reminders")
+async def cron_reminders(authorization: str = Header(default="")):
+    settings = get_settings()
+    if not settings.cron_secret or not secrets.compare_digest(
+        authorization, f"Bearer {settings.cron_secret.get_secret_value()}",
+    ):
+        raise HTTPException(403, "Forbidden")
+    async with httpx.AsyncClient(timeout=10) as client:
+        async with Bot(token=settings.bot_token.get_secret_value()) as bot:
+            return await send_reminders(ReminderRepository(client), bot, pet_keyboard())
 
 
 @app.exception_handler(GameError)
