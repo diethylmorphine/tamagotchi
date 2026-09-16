@@ -7,6 +7,15 @@ if (telegram?.isVersionAtLeast?.('6.1')) {
 }
 const $ = selector => document.querySelector(selector);
 const labels = {satiety: ['Сытость', '#e9a95e'], happiness: ['Настроение', '#eb85cb'], energy: ['Энергия', '#a98af2'], hygiene: ['Чистота', '#6dd6e5']};
+const moods = {
+  sleeping: ['Тихо… набираюсь сил во сне', 'z Z'],
+  hungry: ['Животик урчит. Покорми меня?', '♥'],
+  tired: ['Глазки слипаются. Пора поспать', '☾'],
+  dirty: ['Кажется, мне нужна ванна', '◈'],
+  lonely: ['Скучаю по тебе. Давай поиграем?', '♡'],
+  happy: ['Как же хорошо быть вместе!', '✦'],
+  calm: ['Я рядом. Куда спешить?', '· · ·'],
+};
 const buttons = [...document.querySelectorAll('[data-action]')];
 const dialog = $('#name-dialog');
 const leaderboardDialog = $('#leaderboard-dialog');
@@ -56,6 +65,19 @@ function render(value) {
   $('#level').textContent = 'LVL ' + String(pet.level).padStart(2, '0');
   $('#xp').textContent = 'XP ' + pet.xp % 100 + ' / 100';
   $('#xp-bar').value = pet.xp % 100;
+  const mood = Object.hasOwn(moods, pet.mood) ? pet.mood : 'calm';
+  $('.habitat').dataset.mood = mood;
+  $('#mood-symbol').textContent = moods[mood][1];
+  $('#pet-mood').textContent = moods[mood][0];
+  $('#pet-mood').hidden = false;
+  $('#bond-title').textContent = pet.current_title || 'Первая встреча';
+  $('#bond-title').hidden = false;
+  $('#milestone').hidden = !pet.current_title;
+  const next = pet.next_milestone;
+  $('#milestone-title').textContent = next ? next.title + ' · уровень ' + next.level : 'Неразлучные';
+  $('#milestone-detail').textContent = next
+    ? 'Ещё ' + next.xp_remaining + ' XP до новой вехи. Заботься о питомце, чтобы стать ближе.'
+    : 'Все вехи открыты. Ваша история продолжается!';
   for (const key of Object.keys(labels)) {
     $('#' + key).value = pet.stats[key];
     $('#' + key + '-value').textContent = Math.round(pet.stats[key]);

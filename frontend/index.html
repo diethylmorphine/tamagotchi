@@ -15,13 +15,21 @@
 <section class="screen">
 <div class="screen-top"><span>VIRTUAL PET / 01</span><span id="level">LVL —</span></div>
 <div class="name-row"><h1 id="name">···</h1><button id="rename" aria-label="Переименовать питомца" disabled>✎</button></div>
+<p id="bond-title" hidden></p>
 <div class="habitat">
+<span id="mood-symbol" aria-hidden="true"></span>
 <span class="star s1">✦</span><span class="star s2">+</span><span class="star s3">✧</span><span class="star s4">+</span>
 <div class="orbit"></div>
 <img class="pet" src="/assets/pet.svg" alt="Фиолетовый пиксельный кот" width="220" height="220">
 <div class="pet-shadow"></div><div class="floor"></div>
 </div>
+<p id="pet-mood" role="status" hidden></p>
 <div class="experience"><span id="xp">XP — / 100</span><progress id="xp-bar" max="100" value="0" aria-label="Опыт"></progress></div>
+<section id="milestone" aria-label="Следующая веха дружбы" hidden>
+<span class="milestone-label">ВАША ИСТОРИЯ</span>
+<strong id="milestone-title"></strong>
+<p id="milestone-detail"></p>
+</section>
 <section id="stats" aria-label="Показатели питомца"></section>
 </section>
 <section class="actions" aria-label="Уход за питомцем">

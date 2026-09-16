@@ -41,6 +41,7 @@ DECAY_PER_HOUR = {"satiety": 4, "happiness": 3, "energy": 2, "hygiene": 3}
 COOLDOWN_SECONDS = 10
 SLEEP_SECONDS = 30 * 60
 SLEEP_TICK_SECONDS = 10 * 60
+MILESTONES = ((2, "Знакомые"), (5, "Друзья"), (10, "Неразлучные"))
 REWARDS = {
     Action.feed: {"satiety": 25},
     Action.play: {"happiness": 25, "energy": -15, "satiety": -5},
@@ -119,6 +120,18 @@ def act(pet: Pet, action: Action, now: datetime) -> Pet:
     })
 
 
+def mood_for(pet: Pet, now: datetime) -> str:
+    current = evolve(pet, now)
+    if sleep_remaining(current, now) > 0:
+        return "sleeping"
+    needs = (("satiety", "hungry"), ("energy", "tired"),
+             ("hygiene", "dirty"), ("happiness", "lonely"))
+    stat, mood = min(needs, key=lambda item: getattr(current, item[0]))
+    if getattr(current, stat) < 30:
+        return mood
+    return "happy" if all(getattr(current, s) >= 70 for s, _ in needs) else "calm"
+
+
 def present(pet: Pet, now: datetime | None = None) -> dict:
     now = now or datetime.now(UTC)
     current = evolve(pet, now)
@@ -126,12 +139,27 @@ def present(pet: Pet, now: datetime | None = None) -> dict:
     if current.last_action_at:
         remaining = max(0, COOLDOWN_SECONDS - (now - current.last_action_at).total_seconds())
     sleeping_seconds = sleep_remaining(current, now)
+    level = 1 + current.xp // 100
+    title = "Первая встреча"
+    next_milestone = None
+    for target, milestone_title in MILESTONES:
+        if level >= target:
+            title = milestone_title
+        else:
+            next_milestone = {
+                "level": target, "title": milestone_title,
+                "xp_remaining": (target - 1) * 100 - current.xp,
+            }
+            break
     return {
         "name": current.name,
         "needs_name": not current.name_chosen,
         "stats": {stat: round(getattr(current, stat), 1) for stat in DECAY_PER_HOUR},
         "xp": current.xp,
-        "level": 1 + current.xp // 100,
+        "level": level,
+        "mood": mood_for(current, now),
+        "current_title": title,
+        "next_milestone": next_milestone,
         "cooldown_seconds": max(remaining, sleeping_seconds),
         "sleep_remaining_seconds": sleeping_seconds,
         "can_wake": sleeping_seconds > 0 and current.energy >= 100,

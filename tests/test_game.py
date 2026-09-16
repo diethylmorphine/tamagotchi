@@ -84,3 +84,59 @@ def test_new_sleep_has_its_own_ticks():
     second = act(first, Action.rest, NOW + timedelta(minutes=30))
     assert second.energy == pytest.approx(43.75)
     assert evolve(second, NOW + timedelta(minutes=40)).energy == pytest.approx(51.75 - 1 / 12)
+
+@pytest.mark.parametrize('stats,expected', [
+    ({}, 'happy'),
+    ({'satiety': 29.9}, 'hungry'),
+    ({'satiety': 30}, 'calm'),
+    ({'satiety': 70}, 'happy'),
+    ({'satiety': 69.9}, 'calm'),
+    ({'energy': 20}, 'tired'),
+    ({'hygiene': 20}, 'dirty'),
+    ({'happiness': 20}, 'lonely'),
+    ({'satiety': 20, 'energy': 20}, 'hungry'),
+    ({'energy': 20, 'hygiene': 20}, 'tired'),
+    ({'hygiene': 20, 'happiness': 20}, 'dirty'),
+])
+def test_mood_thresholds_and_priority(stats, expected):
+    pet = Pet(telegram_id=1, updated_at=NOW, **stats)
+    assert present(pet, NOW)['mood'] == expected
+
+
+def test_mood_uses_offline_state_and_sleep_then_wake():
+    pet = Pet(telegram_id=1, updated_at=NOW, satiety=31)
+    assert present(pet, NOW + timedelta(hours=1))['mood'] == 'hungry'
+    sleeping = pet.model_copy(update={'sleep_started_at': NOW, 'satiety': 10})
+    assert present(sleeping, NOW)['mood'] == 'sleeping'
+    assert present(sleeping, NOW + timedelta(minutes=30))['mood'] == 'hungry'
+    rested = sleeping.model_copy(update={'energy': 100})
+    assert present(act(rested, Action.wake, NOW), NOW)['mood'] == 'hungry'
+
+
+@pytest.mark.parametrize('xp,title,target,remaining', [
+    (0, 'Первая встреча', 2, 100),
+    (99, 'Первая встреча', 2, 1),
+    (100, 'Знакомые', 5, 300),
+    (399, 'Знакомые', 5, 1),
+    (400, 'Друзья', 10, 500),
+    (899, 'Друзья', 10, 1),
+    (900, 'Неразлучные', None, None),
+    (10000, 'Неразлучные', None, None),
+])
+def test_friendship_milestones(xp, title, target, remaining):
+    pet = Pet(telegram_id=1, updated_at=NOW, xp=xp)
+    result = present(pet, NOW)
+    assert result['current_title'] == title
+    assert result['xp'] == pet.xp == xp
+    if target is None:
+        assert result['next_milestone'] is None
+    else:
+        assert result['next_milestone']['level'] == target
+        assert result['next_milestone']['xp_remaining'] == remaining
+
+
+def test_milestones_recalculate_after_admin_level_reduction():
+    pet = Pet(telegram_id=1, updated_at=NOW, xp=900)
+    assert present(pet, NOW)['current_title'] == 'Неразлучные'
+    reduced = pet.model_copy(update={'xp': 100})
+    assert present(reduced, NOW)['current_title'] == 'Знакомые'
