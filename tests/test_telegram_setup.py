@@ -45,7 +45,8 @@ def test_remote_status_is_read_only_and_repair_uses_server_credentials(monkeypat
     monkeypatch.setattr("main.get_settings", settings)
     bot = AsyncMock()
     bot.get_webhook_info.return_value = SimpleNamespace(
-        url="https://example.com/api/telegram/webhook", allowed_updates=["message", "callback_query"],
+        url="https://example.com/api/telegram/webhook",
+        allowed_updates=["message", "callback_query"],
         pending_update_count=2, last_error_date=None, last_error_message=None,
     )
     context = AsyncMock()
