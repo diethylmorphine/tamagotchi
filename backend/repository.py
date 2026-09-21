@@ -17,8 +17,9 @@ class PetRepository:
 
     async def request(self, method: str, **kwargs) -> httpx.Response:
         headers = {**self.headers, **kwargs.pop("headers", {})}
+        url = kwargs.pop("url", self.url)
         try:
-            response = await self.client.request(method, self.url, headers=headers, **kwargs)
+            response = await self.client.request(method, url, headers=headers, **kwargs)
             response.raise_for_status()
             return response
         except httpx.HTTPError as exc:

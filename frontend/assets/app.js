@@ -6,6 +6,8 @@ if (telegram?.isVersionAtLeast?.('6.1')) {
   telegram.setBackgroundColor('#0c0918');
 }
 const $ = selector => document.querySelector(selector);
+const previewSpecies = new URLSearchParams(location.search).get('preview');
+const preview = !telegram?.initData && ['cat', 'fox'].includes(previewSpecies);
 const labels = {satiety: ['Сытость', '#e9a95e'], happiness: ['Настроение', '#eb85cb'], energy: ['Энергия', '#a98af2'], hygiene: ['Чистота', '#6dd6e5']};
 const moods = {
   sleeping: ['Тихо… набираюсь сил во сне', 'z Z'],
@@ -20,6 +22,10 @@ const buttons = [...document.querySelectorAll('[data-action]')];
 const dialog = $('#name-dialog');
 const leaderboardDialog = $('#leaderboard-dialog');
 const sleepDialog = $('#sleep-dialog');
+const petPicker = $('#pet-picker');
+const speciesButtons = [...document.querySelectorAll('.pet-options [data-species]')];
+let reminderState = null;
+let reminderBusy = false;
 let busy = false;
 let pet = null;
 let cooldownUntil = 0;
@@ -38,10 +44,13 @@ function sync() {
   const sleeping = Math.max(0, Math.ceil((sleepUntil - Date.now()) / 1000));
   buttons.forEach(button => {
     const wake = button.dataset.action === 'rest' && pet?.can_wake && sleeping > 0;
-    button.disabled = busy || !pet || pet.needs_name || (seconds > 0 && !wake);
+    button.disabled = preview || busy || !pet || pet.needs_name || (seconds > 0 && !wake);
     if (button.dataset.action === 'rest') button.lastElementChild.textContent = wake ? 'Разбудить' : 'Спать';
   });
-  $('#rename').disabled = busy || !pet || sleeping > 0;
+  $('#rename').disabled = preview || busy || !pet || sleeping > 0;
+  $('#pet-picker-open').disabled = busy || !pet;
+  speciesButtons.forEach(button => { button.disabled = busy; });
+  $('#pet-picker-close').disabled = busy;
   $('#save-name').disabled = busy;
   $('#leaderboard-open').disabled = !telegram?.initData;
   $('#cancel-name').disabled = busy;
@@ -61,11 +70,29 @@ function openName() {
 }
 function render(value) {
   pet = value;
+  const species = pet.species === 'fox' ? 'fox' : 'cat';
+  document.body.dataset.species = species;
+  const background = species === 'fox' ? '#170e09' : '#100b1c';
+  document.querySelector('meta[name="theme-color"]').content = background;
+  if (telegram?.isVersionAtLeast?.('6.1')) {
+    telegram.setHeaderColor(background);
+    telegram.setBackgroundColor(background);
+  }
+  $('#pet-edition').textContent = 'VIRTUAL PET / ' + (species === 'fox' ? '02' : '01');
+  $('#pet-picker-icon').src = '/assets/pets/' + species + '-calm.webp';
+  for (const button of speciesButtons) {
+    const selected = button.dataset.species === species;
+    button.setAttribute('aria-pressed', String(selected));
+    button.querySelector('.selection-mark').textContent = selected ? 'Выбран' : 'Выбрать';
+  }
   $('#name').textContent = pet.name;
   $('#level').textContent = 'LVL ' + String(pet.level).padStart(2, '0');
   $('#xp').textContent = 'XP ' + pet.xp % 100 + ' / 100';
   $('#xp-bar').value = pet.xp % 100;
   const mood = Object.hasOwn(moods, pet.mood) ? pet.mood : 'calm';
+  const emotion = {sleeping: 'sleeping', hungry: 'hungry', tired: 'calm', dirty: 'grumpy', lonely: 'sad', happy: 'happy', calm: 'calm'}[mood];
+  $('.pet').src = '/assets/pets/' + species + '-' + emotion + '.webp';
+  $('.pet').alt = (species === 'fox' ? 'Рыжая лиса' : 'Фиолетовый кот') + ' — ' + moods[mood][0];
   $('.habitat').dataset.mood = mood;
   $('#mood-symbol').textContent = moods[mood][1];
   $('#pet-mood').textContent = moods[mood][0];
@@ -80,7 +107,7 @@ function render(value) {
     : 'Все вехи открыты. Ваша история продолжается!';
   for (const key of Object.keys(labels)) {
     $('#' + key).value = pet.stats[key];
-    $('#' + key + '-value').textContent = Math.round(pet.stats[key]);
+    $('#' + key + '-value').textContent = Math.round(pet.stats[key]) + '%';
   }
   cooldownUntil = Date.now() + pet.cooldown_seconds * 1000;
   sleepUntil = Date.now() + (pet.sleep_remaining_seconds || 0) * 1000;
@@ -141,8 +168,9 @@ $('#leaderboard-open').addEventListener('click', () => {
 });
 $('#leaderboard-retry').addEventListener('click', loadLeaderboard);
 async function run(action, quiet = false) {
+  if (preview) return;
   if (leaderboardDialog.open) return;
-  if (busy || dialog.open || sleepDialog.open) return;
+  if (busy || dialog.open || sleepDialog.open || petPicker.open) return;
   busy = true;
   failed = false;
   $('#retry').hidden = true;
@@ -159,6 +187,7 @@ async function run(action, quiet = false) {
       }
     }
     render(await request(action ? '/api/pet/actions' : '/api/pet', action ? 'POST' : 'GET', action ? {action} : undefined));
+    if (!action) loadReminders();
     status = action ? {feed: 'Сытость восстановлена', play: 'Настроение улучшилось', wash: 'Теперь чисто', rest: '', wake: 'Питомец проснулся!'}[action] : '';
     if (action) {
       $('.pet').classList.remove('react');
@@ -206,6 +235,68 @@ $('#confirm-sleep').addEventListener('click', () => {
 });
 $('#retry').addEventListener('click', () => run());
 $('.pet').addEventListener('animationend', () => $('.pet').classList.remove('react'));
+
+$('#pet-picker-open').addEventListener('click', () => {
+  $('#pet-picker-message').textContent = '';
+  petPicker.showModal();
+});
+$('#pet-picker-close').addEventListener('click', () => petPicker.close());
+petPicker.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
+speciesButtons.forEach(button => button.addEventListener('click', async () => {
+  if (busy || !pet) return;
+  const species = button.dataset.species;
+  if (species === pet.species) { petPicker.close(); return; }
+  busy = true;
+  $('#pet-picker-message').textContent = 'Сохраняем выбор…';
+  sync();
+  try {
+    render(preview ? {...pet, species} : await request('/api/pet/species', 'PATCH', {species}));
+    petPicker.close();
+    status = preview ? 'Превью · изменения не сохраняются' : 'Питомец выбран. Ваша история продолжается!';
+    failed = false;
+  } catch (error) {
+    $('#pet-picker-message').textContent = errorText(error);
+  } finally { busy = false; sync(); }
+}));
+
+function renderReminders() {
+  const enabled = reminderState?.enabled;
+  $('#reminder-toggle').textContent = !reminderState ? 'Повторить' : enabled ? 'Отключить' : 'Включить';
+  $('#reminder-toggle').disabled = reminderBusy;
+  $('#reminder-status').textContent = !reminderState ? 'Не удалось проверить подписку.'
+    : !reminderState.configured ? 'Доставка ещё не настроена. Сообщения пока не отправляются.'
+    : !reminderState.scheduler_healthy ? 'Проверка доставки задерживается. Напоминания могут не приходить.'
+    : enabled ? 'Включены: уход и окончание сна.' : 'Сообщим, когда питомцу нужна забота.';
+}
+async function loadReminders() {
+  if (reminderBusy || preview) return;
+  $('.reminder-control').hidden = false;
+  reminderBusy = true;
+  $('#reminder-toggle').disabled = true;
+  try {
+    reminderState = await request('/api/reminders');
+  } catch { reminderState = null; }
+  finally { reminderBusy = false; renderReminders(); }
+}
+$('#reminder-toggle').addEventListener('click', async () => {
+  if (reminderBusy) return;
+  if (!reminderState) { await loadReminders(); return; }
+  reminderBusy = true;
+  $('#reminder-toggle').disabled = true;
+  try {
+    if (!reminderState.enabled) {
+      if (!telegram?.isVersionAtLeast?.('6.9') || !telegram.requestWriteAccess) {
+        throw new Error('Отправь боту /start в личном чате, затем открой игру заново.');
+      }
+      const allowed = await new Promise(resolve => telegram.requestWriteAccess(resolve));
+      if (!allowed) throw new Error('Разреши боту отправлять сообщения, чтобы получать напоминания.');
+    }
+    reminderState = await request('/api/reminders', 'PATCH', {enabled: !reminderState.enabled});
+    renderReminders();
+  } catch (error) {
+    $('#reminder-status').textContent = errorText(error);
+  } finally { reminderBusy = false; $('#reminder-toggle').disabled = false; }
+});
 
 let adminPet = null;
 let adminBusy = false;
@@ -308,7 +399,16 @@ $('#admin-editor').addEventListener('submit', event => {
   });
 });
 setInterval(sync, 1000);
-if (telegram?.initData) {
+if (preview) {
+  $('#preview-banner').hidden = false;
+  render({species: previewSpecies, name: previewSpecies === 'fox' ? 'Мейпл' : 'Луна',
+    needs_name: false, level: 7, xp: 664, mood: 'calm', current_title: 'Друзья',
+    next_milestone: {title: 'Неразлучные', level: 10, xp_remaining: 236},
+    stats: {satiety: 82, happiness: 94, hygiene: 76, energy: 48},
+    cooldown_seconds: 0, sleep_remaining_seconds: 0, can_wake: false});
+  status = 'Превью · выбери кота или лису кнопкой слева сверху';
+  sync();
+} else if (telegram?.initData) {
   run();
   setInterval(() => { if (!document.hidden && !busy && !dialog.open) run(undefined, true); }, 60000);
 } else {

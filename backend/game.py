@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -20,6 +21,7 @@ class Pet(BaseModel):
     owner_username: str | None = None
     name: str = "Питомец"
     name_chosen: bool = False
+    species: Literal["cat", "fox"] = "cat"
     satiety: float = Field(default=80, ge=0, le=100)
     happiness: float = Field(default=80, ge=0, le=100)
     energy: float = Field(default=80, ge=0, le=100)
@@ -153,6 +155,7 @@ def present(pet: Pet, now: datetime | None = None) -> dict:
             break
     return {
         "name": current.name,
+        "species": current.species,
         "needs_name": not current.name_chosen,
         "stats": {stat: round(getattr(current, stat), 1) for stat in DECAY_PER_HOUR},
         "xp": current.xp,

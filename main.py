@@ -2,6 +2,7 @@ import secrets
 import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 import httpx
 from aiogram import Bot
@@ -42,7 +43,12 @@ async def cron_reminders(authorization: str = Header(default="")):
         raise HTTPException(403, "Forbidden")
     async with httpx.AsyncClient(timeout=10) as client:
         async with Bot(token=settings.bot_token.get_secret_value()) as bot:
-            return await send_reminders(ReminderRepository(client), bot, pet_keyboard())
+            repo = ReminderRepository(client)
+            started = datetime.now(UTC)
+            await repo.start_run(started)
+            result = await send_reminders(repo, bot, pet_keyboard())
+            await repo.finish_run(started, result)
+            return result
 
 
 @app.exception_handler(GameError)
@@ -54,6 +60,49 @@ async def game_error(_request, exc: GameError):
 async def repository():
     async with httpx.AsyncClient(timeout=10) as client:
         yield PetRepository(client)
+
+
+async def reminder_repository():
+    async with httpx.AsyncClient(timeout=10) as client:
+        yield ReminderRepository(client)
+
+
+async def delivery_status(repo: ReminderRepository):
+    configured = bool(get_settings().cron_secret)
+    state = await repo.scheduler_status() if configured else {
+        "scheduler_healthy": False, "last_run_at": None,
+    }
+    return {"configured": configured, **state}
+
+
+@app.get("/api/reminders")
+async def reminder_status(
+    response: Response,
+    user_id: int = Depends(telegram_user),
+    repo: ReminderRepository = Depends(reminder_repository),
+):
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "enabled": await repo.is_enabled(user_id),
+        **await delivery_status(repo),
+    }
+
+
+class ReminderRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool = Field(strict=True)
+
+
+@app.patch("/api/reminders")
+async def update_reminders(
+    body: ReminderRequest,
+    user_id: int = Depends(telegram_user),
+    repo: PetRepository = Depends(repository),
+    reminders: ReminderRepository = Depends(reminder_repository),
+):
+    await repo.get_or_create(user_id)
+    await reminders.enable(user_id, body.enabled)
+    return {"enabled": body.enabled, **await delivery_status(reminders)}
 
 
 @app.get("/api/session")
@@ -170,6 +219,29 @@ class NameRequest(BaseModel):
         if any(unicodedata.category(char).startswith("C") for char in value):
             raise ValueError("В имени недопустимы управляющие символы")
         return value
+
+
+class SpeciesRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    species: Literal["cat", "fox"]
+
+
+@app.patch("/api/pet/species")
+async def change_species(
+    body: SpeciesRequest,
+    user_id: int = Depends(telegram_user),
+    repo: PetRepository = Depends(repository),
+):
+    for _ in range(3):
+        pet = await repo.get_or_create(user_id)
+        if pet.species == body.species:
+            return present(pet)
+        updated = pet.model_copy(update={
+            "species": body.species, "version": pet.version + 1,
+        })
+        if await repo.save(updated, previous_version=pet.version):
+            return present(updated)
+    raise HTTPException(409, "Питомец уже обновился. Повторите выбор")
 
 
 @app.patch("/api/pet/name")

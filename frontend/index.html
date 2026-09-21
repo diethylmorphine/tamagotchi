@@ -9,18 +9,20 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script type="module" src="/assets/app.js"></script>
 </head>
-<body>
+<body data-species="cat">
+<p id="preview-banner" hidden>Превью · изменения не сохраняются</p>
 <main class="device">
-<header><span class="brand"><span class="pixel-mark">✦</span> Tamagotchi FWN</span><button id="leaderboard-open" type="button" aria-label="Таблица лидеров" aria-haspopup="dialog" disabled><span aria-hidden="true">🏆</span> Топ-5</button></header>
+<header><button id="pet-picker-open" type="button" aria-label="Выбрать питомца" aria-haspopup="dialog" disabled><img id="pet-picker-icon" src="/assets/pets/cat-calm.webp" alt="" width="30" height="30"><span>Питомец</span><span aria-hidden="true">⌄</span></button><span class="brand">Tamagotchi<br><b>FWN</b></span><button id="leaderboard-open" type="button" aria-label="Таблица лидеров" aria-haspopup="dialog" disabled><span aria-hidden="true">♛</span> Топ-5</button></header>
 <section class="screen">
-<div class="screen-top"><span>VIRTUAL PET / 01</span><span id="level">LVL —</span></div>
+<div class="screen-top"><span id="pet-edition">VIRTUAL PET / 01</span><span id="level">LVL —</span></div>
 <div class="name-row"><h1 id="name">···</h1><button id="rename" aria-label="Переименовать питомца" disabled>✎</button></div>
 <p id="bond-title" hidden></p>
 <div class="habitat">
 <span id="mood-symbol" aria-hidden="true"></span>
 <span class="star s1">✦</span><span class="star s2">+</span><span class="star s3">✧</span><span class="star s4">+</span>
 <div class="orbit"></div>
-<img class="pet" src="/assets/pet.svg" alt="Фиолетовый пиксельный кот" width="220" height="220">
+<img class="pet" src="/assets/pets/cat-calm.webp" alt="Фиолетовый пиксельный кот" width="240" height="240">
+<div class="habitat-plants" aria-hidden="true"><span>⌁</span><span>⌁</span></div>
 <div class="pet-shadow"></div><div class="floor"></div>
 </div>
 <p id="pet-mood" role="status" hidden></p>
@@ -40,6 +42,10 @@
 </section>
 <p id="message" role="status" aria-live="polite">Загрузка…</p>
 <button id="retry" hidden>Обновить состояние</button>
+<section class="reminder-control" aria-label="Уведомления" hidden>
+<div><strong>Напоминания в Telegram</strong><p id="reminder-status" role="status">Проверяем подписку…</p></div>
+<button id="reminder-toggle" type="button" disabled>Включить</button>
+</section>
 <details id="admin-panel" hidden>
 <summary>Администрирование</summary>
 <form id="admin-search">
@@ -59,6 +65,17 @@
 </details>
 <footer><span>✦</span><i></i><i></i><i></i><span>✦</span></footer>
 </main>
+<dialog id="pet-picker" aria-labelledby="pet-picker-title" aria-describedby="pet-picker-description">
+<p class="eyebrow">ТВОЙ МАЛЕНЬКИЙ МИР</p>
+<h2 id="pet-picker-title">Кто будет рядом?</h2>
+<p id="pet-picker-description">Выбери питомца. Имя, уровень и вся ваша история сохранятся.</p>
+<div class="pet-options">
+<button type="button" data-species="cat" aria-pressed="true"><img src="/assets/pets/cat-calm.webp" alt="" width="120" height="120"><strong>Кот</strong><span>Лавандовый уют</span><small class="selection-mark">Выбран</small></button>
+<button type="button" data-species="fox" aria-pressed="false"><img src="/assets/pets/fox-calm.webp" alt="" width="120" height="120"><strong>Лиса</strong><span>Маленький огонёк</span><small class="selection-mark">Выбрать</small></button>
+</div>
+<p id="pet-picker-message" role="status" aria-live="polite"></p>
+<button id="pet-picker-close" class="secondary-button" type="button">Закрыть</button>
+</dialog>
 <dialog id="sleep-dialog" aria-labelledby="sleep-title" aria-describedby="sleep-description">
 <span class="dialog-icon">☾</span>
 <h2 id="sleep-title">Уложить спать?</h2>

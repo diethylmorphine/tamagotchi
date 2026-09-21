@@ -1,0 +1,40 @@
+// Slice generated transparent atlases into consistently aligned runtime sprites.
+// Usage: NODE_PATH=<directory containing sharp> node scripts/prepare_pet_assets.cjs
+const sharp = require('sharp');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const emotions = ['calm', 'happy', 'sleeping', 'sad', 'hungry', 'grumpy'];
+
+(async () => {
+  const destination = path.join(root, 'frontend/assets/pets');
+  await fs.mkdir(destination, {recursive: true});
+  for (const species of ['fox', 'cat']) {
+    const source = path.join(root, `output/pet-emotions/${species}-atlas.png`);
+    const {width, height, hasAlpha} = await sharp(source).metadata();
+    if (!hasAlpha || width !== 1254 || height !== 1254) throw new Error('Unexpected atlas format');
+    // Generated columns have small differences in spacing; cuts stay in empty gutters.
+    const columns = species === 'cat' ? [0, 433, 840, width] : [0, 418, 836, width];
+    const pieces = [];
+    for (let index = 0; index < 6; index++) {
+      const col = index % 3;
+      const cell = await sharp(source).extract({
+        left: columns[col], top: index < 3 ? 0 : 627,
+        width: columns[col + 1] - columns[col], height: 627,
+      }).png().toBuffer();
+      const {data, info} = await sharp(cell)
+        .trim({background: '#00000000', threshold: 20}).png().toBuffer({resolveWithObject: true});
+      pieces.push({data, info});
+    }
+    const scale = Math.min(450 / Math.max(...pieces.map(p => p.info.width)),
+      450 / Math.max(...pieces.map(p => p.info.height)));
+    for (const [index, piece] of pieces.entries()) {
+      const w = Math.round(piece.info.width * scale);
+      const h = Math.round(piece.info.height * scale);
+      const sprite = await sharp(piece.data).resize(w, h, {kernel: 'nearest'}).toBuffer();
+      await sharp({create: {width: 512, height: 512, channels: 4, background: '#00000000'}})
+        .composite([{input: sprite, left: Math.floor((512 - w) / 2), top: 480 - h}])
+        .webp({lossless: true}).toFile(path.join(destination, `${species}-${emotions[index]}.webp`));
+    }
+  }
+})().catch(error => { console.error(error); process.exitCode = 1; });

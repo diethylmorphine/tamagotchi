@@ -65,6 +65,55 @@ def test_new_sleep_can_notify_again():
     assert reminder(row, NOW + timedelta(minutes=15))[1]
 
 
+def test_completed_sleep_notifies_after_final_tick_and_only_once():
+    row = recipient(energy=80, sleep_started_at=NOW, last_action_at=NOW)
+    text, changes = reminder(row, NOW + timedelta(minutes=32))
+    assert "сон закончился" in text
+    row.update(changes)
+    assert reminder(row, NOW + timedelta(minutes=37)) == ("", {})
+
+
+def test_old_or_already_interacted_sleep_does_not_notify():
+    row = recipient(energy=80, sleep_started_at=NOW, last_action_at=NOW)
+    assert reminder(row, NOW + timedelta(hours=2)) == ("", {})
+    row["pet"]["last_action_at"] = (NOW + timedelta(minutes=31)).isoformat()
+    assert reminder(row, NOW + timedelta(minutes=32)) == ("", {})
+
+
+def test_reminder_settings_are_authenticated_and_independent_of_game_progress(monkeypatch):
+    from types import SimpleNamespace
+
+    from backend.auth import telegram_user
+    from main import reminder_repository, repository
+
+    reminders = AsyncMock()
+    reminders.is_enabled.return_value = False
+    pets = AsyncMock()
+    monkeypatch.setattr("main.get_settings", lambda: SimpleNamespace(cron_secret=None))
+    with TestClient(app) as client:
+        assert client.get("/api/reminders").status_code == 401
+        assert client.patch("/api/reminders", json={"enabled": True}).status_code == 401
+    app.dependency_overrides[telegram_user] = lambda: 7
+    app.dependency_overrides[repository] = lambda: pets
+    app.dependency_overrides[reminder_repository] = lambda: reminders
+    try:
+        with TestClient(app) as client:
+            response = client.get("/api/reminders")
+            assert response.json() == {
+                "enabled": False, "configured": False,
+                "scheduler_healthy": False, "last_run_at": None,
+            }
+            assert response.headers["cache-control"] == "no-store"
+            for enabled in (True, False):
+                response = client.patch("/api/reminders", json={"enabled": enabled})
+                assert response.json()["enabled"] is enabled
+                reminders.enable.assert_awaited_with(7, enabled)
+            pets.save.assert_not_awaited()
+            assert client.patch("/api/reminders", json={"enabled": "false"}).status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_cron_requires_its_own_secret(monkeypatch):
     from backend.config import get_settings
 
@@ -99,6 +148,37 @@ def test_claim_is_atomic_and_checks_enabled(monkeypatch):
     asyncio.run(run())
     assert calls[0].url.params["last_care_at"] == "is.null"
     assert calls[0].url.params["enabled"] == "eq.true"
+
+
+def test_scheduler_heartbeat_is_fresh_and_completion_uses_run_condition(monkeypatch):
+    from types import SimpleNamespace
+
+    from pydantic import SecretStr
+
+    monkeypatch.setattr("backend.repository.get_settings", lambda: SimpleNamespace(
+        supabase_url="https://example.com", supabase_service_role_key=SecretStr("test"),
+    ))
+    calls = []
+    rows = []
+
+    def handle(request):
+        calls.append(request)
+        return httpx.Response(200, json=rows)
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+            repo = ReminderRepository(client)
+            assert not (await repo.scheduler_status())["scheduler_healthy"]
+            rows.append({"completed_at": datetime.now(UTC).isoformat(), "failed": 0})
+            assert (await repo.scheduler_status())["scheduler_healthy"]
+            rows[0]["completed_at"] = (datetime.now(UTC) - timedelta(minutes=16)).isoformat()
+            assert not (await repo.scheduler_status())["scheduler_healthy"]
+            await repo.start_run(NOW)
+            await repo.finish_run(NOW, {"sent": 2, "failed": 0})
+
+    asyncio.run(run())
+    assert all(request.url.path.endswith('/reminder_scheduler') for request in calls)
+    assert calls[-1].url.params["started_at"] == f"eq.{NOW.isoformat()}"
 
 
 def test_delivery_claim_conflicts_and_telegram_failures():

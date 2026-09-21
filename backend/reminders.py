@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError, TelegramRetryAfter
 
-from backend.game import Pet, evolve, sleep_remaining
+from backend.game import SLEEP_SECONDS, Pet, evolve, sleep_remaining
 from backend.repository import PetRepository
 
 logger = logging.getLogger(__name__)
@@ -19,12 +19,53 @@ class ReminderRepository(PetRepository):
         super().__init__(client)
         self.url = self.url.removesuffix("pets") + "pet_reminders"
 
+    @property
+    def scheduler_url(self):
+        return self.url.removesuffix("pet_reminders") + "reminder_scheduler"
+
+    async def start_run(self, now: datetime):
+        await self.request(
+            "POST", url=self.scheduler_url, params={"on_conflict": "id"},
+            headers={"Prefer": "resolution=merge-duplicates"},
+            json={"id": 1, "started_at": now.isoformat()},
+        )
+
+    async def finish_run(self, started: datetime, result: dict):
+        await self.request(
+            "PATCH", url=self.scheduler_url,
+            params={"id": "eq.1", "started_at": f"eq.{started.isoformat()}"},
+            json={"completed_at": datetime.now(UTC).isoformat(),
+                  "sent": result["sent"], "failed": result["failed"]},
+        )
+
+    async def scheduler_status(self) -> dict:
+        response = await self.request("GET", url=self.scheduler_url, params={
+            "id": "eq.1", "select": "completed_at,failed", "limit": "1",
+        })
+        rows = response.json()
+        completed = rows[0]["completed_at"] if rows else None
+        recent = completed and (
+            timedelta(0) <= datetime.now(UTC) - datetime.fromisoformat(completed)
+            < timedelta(minutes=15)
+        )
+        return {
+            "scheduler_healthy": bool(recent),
+            "last_run_at": completed,
+        }
+
     async def enable(self, user_id: int, enabled: bool):
         await self.request(
             "POST", params={"on_conflict": "telegram_id"},
             headers={"Prefer": "resolution=merge-duplicates"},
             json={"telegram_id": user_id, "enabled": enabled},
         )
+
+    async def is_enabled(self, user_id: int) -> bool:
+        response = await self.request("GET", params={
+            "telegram_id": f"eq.{user_id}", "select": "enabled", "limit": "1",
+        })
+        rows = response.json()
+        return bool(rows and rows[0]["enabled"])
 
     async def recipients(self, after: int):
         response = await self.request("GET", params={
@@ -47,6 +88,20 @@ def reminder(row: dict, now: datetime) -> tuple[str, dict]:
     pet = evolve(Pet.model_validate(row["pet"]), now)
     if not pet.name_chosen:
         return "", {}
+    # A cron tick can fall just after the final sleep reward. Do not lose that
+    # notification merely because the pet has already automatically woken up.
+    if pet.sleep_started_at:
+        end = pet.sleep_started_at + timedelta(seconds=SLEEP_SECONDS)
+        notified = row["sleep_notified_at"]
+        already_notified = (
+            notified and datetime.fromisoformat(notified) == pet.sleep_started_at
+        )
+        interacted = pet.last_action_at and pet.last_action_at > pet.sleep_started_at
+        if end <= now < end + timedelta(hours=1) and not already_notified and not interacted:
+            return (
+                f"☀️ {pet.name}: сон закончился! Я снова готов играть.",
+                {"sleep_notified_at": pet.sleep_started_at.isoformat()},
+            )
     if sleep_remaining(pet, now) > 0:
         start = pet.sleep_started_at.isoformat()
         notified = row["sleep_notified_at"]
