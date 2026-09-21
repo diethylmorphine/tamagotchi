@@ -18,6 +18,7 @@ from backend.config import get_settings
 from backend.game import Action, GameError, act, evolve, present
 from backend.reminders import ReminderRepository, send_reminders
 from backend.repository import PetRepository
+from backend.telegram_setup import configure_telegram, webhook_status
 
 app = FastAPI(title="Tamagotchi-Fawn API", version="0.1.0")
 FRONTEND = Path(__file__).parent / "frontend"
@@ -49,6 +50,29 @@ async def cron_reminders(authorization: str = Header(default="")):
             result = await send_reminders(repo, bot, pet_keyboard())
             await repo.finish_run(started, result)
             return result
+
+
+@app.get("/api/cron/telegram")
+async def telegram_status(authorization: str = Header(default="")):
+    settings = get_settings()
+    if not settings.cron_secret or not secrets.compare_digest(
+        authorization, f"Bearer {settings.cron_secret.get_secret_value()}",
+    ):
+        raise HTTPException(403, "Forbidden")
+    async with Bot(token=settings.bot_token.get_secret_value()) as bot:
+        return await webhook_status(bot, settings)
+
+
+@app.post("/api/cron/telegram")
+async def repair_telegram(authorization: str = Header(default="")):
+    settings = get_settings()
+    if not settings.cron_secret or not secrets.compare_digest(
+        authorization, f"Bearer {settings.cron_secret.get_secret_value()}",
+    ):
+        raise HTTPException(403, "Forbidden")
+    async with Bot(token=settings.bot_token.get_secret_value()) as bot:
+        await configure_telegram(bot, settings)
+        return await webhook_status(bot, settings)
 
 
 @app.exception_handler(GameError)
