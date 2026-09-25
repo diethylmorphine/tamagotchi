@@ -23,6 +23,7 @@ const dialog = $('#name-dialog');
 const leaderboardDialog = $('#leaderboard-dialog');
 const sleepDialog = $('#sleep-dialog');
 const petPicker = $('#pet-picker');
+const settingsDialog = $('#settings-dialog');
 const speciesButtons = [...document.querySelectorAll('.pet-options [data-species]')];
 let reminderState = null;
 let reminderBusy = false;
@@ -262,27 +263,40 @@ speciesButtons.forEach(button => button.addEventListener('click', async () => {
 function renderReminders() {
   const enabled = reminderState?.enabled;
   $('#reminder-toggle').textContent = !reminderState ? 'Повторить' : enabled ? 'Отключить' : 'Включить';
-  $('#reminder-toggle').disabled = reminderBusy;
-  $('#reminder-status').textContent = !reminderState ? 'Не удалось проверить подписку.'
+  $('#reminder-toggle').disabled = reminderBusy || preview || !telegram?.initData;
+  $('#reminder-refresh').disabled = reminderBusy || preview || !telegram?.initData;
+  $('#reminder-status').textContent = preview ? 'В превью настройки недоступны.'
+    : !telegram?.initData ? 'Открой игру в Telegram, чтобы настроить уведомления.'
+    : !reminderState ? 'Не удалось проверить подписку. Попробуй ещё раз.'
+    : enabled ? 'Включены: уход и окончание сна.' : 'Отключены. Бот не будет присылать напоминания.';
+  $('#reminder-delivery').textContent = !reminderState ? ''
     : !reminderState.configured ? 'Доставка ещё не настроена. Сообщения пока не отправляются.'
     : !reminderState.scheduler_healthy ? 'Проверка доставки задерживается. Напоминания могут не приходить.'
-    : enabled ? 'Включены: уход и окончание сна.' : 'Сообщим, когда питомцу нужна забота.';
+    : 'Проверка напоминаний работает. Сообщение придёт, когда питомцу понадобится забота.';
 }
 async function loadReminders() {
-  if (reminderBusy || preview) return;
-  $('.reminder-control').hidden = false;
+  if (reminderBusy) return;
+  if (preview || !telegram?.initData) { renderReminders(); return; }
   reminderBusy = true;
-  $('#reminder-toggle').disabled = true;
+  renderReminders();
+  $('#reminder-status').textContent = 'Проверяем подписку…';
   try {
     reminderState = await request('/api/reminders');
   } catch { reminderState = null; }
   finally { reminderBusy = false; renderReminders(); }
 }
+$('#settings-open').addEventListener('click', () => {
+  settingsDialog.showModal();
+  loadReminders();
+});
+$('#settings-close').addEventListener('click', () => settingsDialog.close());
+$('#reminder-refresh').addEventListener('click', loadReminders);
 $('#reminder-toggle').addEventListener('click', async () => {
-  if (reminderBusy) return;
+  if (reminderBusy || preview || !telegram?.initData) return;
   if (!reminderState) { await loadReminders(); return; }
   reminderBusy = true;
   $('#reminder-toggle').disabled = true;
+  $('#reminder-refresh').disabled = true;
   try {
     if (!reminderState.enabled) {
       if (!telegram?.isVersionAtLeast?.('6.9') || !telegram.requestWriteAccess) {
@@ -292,10 +306,15 @@ $('#reminder-toggle').addEventListener('click', async () => {
       if (!allowed) throw new Error('Разреши боту отправлять сообщения, чтобы получать напоминания.');
     }
     reminderState = await request('/api/reminders', 'PATCH', {enabled: !reminderState.enabled});
+    reminderBusy = false;
     renderReminders();
   } catch (error) {
     $('#reminder-status').textContent = errorText(error);
-  } finally { reminderBusy = false; $('#reminder-toggle').disabled = false; }
+  } finally {
+    reminderBusy = false;
+    $('#reminder-toggle').disabled = false;
+    $('#reminder-refresh').disabled = false;
+  }
 });
 
 let adminPet = null;

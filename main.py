@@ -1,3 +1,4 @@
+import logging
 import secrets
 import unicodedata
 from datetime import UTC, datetime
@@ -6,6 +7,7 @@ from typing import Literal
 
 import httpx
 from aiogram import Bot
+from aiogram.exceptions import TelegramForbiddenError
 from aiogram.types import Update
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.responses import FileResponse, JSONResponse
@@ -310,5 +312,12 @@ async def telegram_webhook(
         raise HTTPException(403, "Forbidden")
     # Await handlers: background tasks may be stopped after a serverless response.
     async with Bot(token=settings.bot_token.get_secret_value()) as bot:
-        await dispatcher.feed_update(bot, update)
+        try:
+            await dispatcher.feed_update(bot, update)
+        except TelegramForbiddenError:
+            # Retrying cannot deliver to a blocked chat. Acknowledge this update
+            # so Telegram can drain the queue; keep transient errors retryable.
+            logging.getLogger(__name__).info(
+                "Telegram refused delivery for update %s", update.update_id,
+            )
     return {"ok": True}

@@ -3,6 +3,8 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from aiogram.exceptions import TelegramForbiddenError, TelegramNetworkError
+from aiogram.methods import SendMessage
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
@@ -64,3 +66,23 @@ def test_remote_status_is_read_only_and_repair_uses_server_credentials(monkeypat
         assert "w" * 32 not in response.text
         assert "a" * 35 not in response.text
         bot.set_webhook.assert_awaited_once()
+
+
+@pytest.mark.parametrize("error,status", [
+    (TelegramForbiddenError, 200), (TelegramNetworkError, 500),
+])
+def test_webhook_acknowledges_blocked_chat_but_retries_network_failure(
+    monkeypatch, error, status,
+):
+    monkeypatch.setattr("main.get_settings", settings)
+    context = AsyncMock()
+    monkeypatch.setattr("main.Bot", lambda **kwargs: context)
+    handler = AsyncMock(side_effect=error(
+        method=SendMessage(chat_id=123, text="menu"), message="Delivery failed",
+    ))
+    monkeypatch.setattr("main.dispatcher.feed_update", handler)
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.post("/api/telegram/webhook", json={"update_id": 42},
+                               headers={"X-Telegram-Bot-Api-Secret-Token": "w" * 32})
+    assert response.status_code == status
+    handler.assert_awaited_once()

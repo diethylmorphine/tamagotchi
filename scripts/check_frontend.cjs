@@ -30,6 +30,10 @@ const path = require('node:path');
       await page.setViewportSize({width, height: 900});
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     }
+    await page.locator('#settings-open').click();
+    assert.equal(await page.locator('#settings-dialog').isVisible(), true);
+    assert.equal(await page.locator('#reminder-toggle').isDisabled(), true);
+    await page.locator('#settings-close').click();
 
     // No real Telegram credentials and no real backend writes are used in this context.
     const live = await browser.newPage({viewport: {width: 390, height: 950}});
@@ -48,6 +52,7 @@ const path = require('node:path');
     let enabled = false;
     let failSpecies = false;
     let reminderWrites = 0;
+    let schedulerHealthy = true;
     await live.route('**/api/**', async route => {
       const request = route.request();
       const url = new URL(request.url()).pathname;
@@ -60,7 +65,7 @@ const path = require('node:path');
         data = pet;
       } else if (url === '/api/reminders') {
         if (request.method() === 'PATCH') { enabled = request.postDataJSON().enabled; reminderWrites++; }
-        data = {enabled, configured: true, scheduler_healthy: true};
+        data = {enabled, configured: true, scheduler_healthy: schedulerHealthy};
       } else throw new Error('Unexpected API request: ' + url);
       await route.fulfill({json: data});
     });
@@ -78,6 +83,7 @@ const path = require('node:path');
     await live.locator('#pet-picker-message').filter({hasText: 'Тестовая ошибка'}).waitFor();
     assert.equal(await live.locator('body').getAttribute('data-species'), 'fox');
     await live.locator('#pet-picker-close').click();
+    await live.locator('#settings-open').click();
     await live.locator('#reminder-toggle').filter({hasText: 'Включить'}).waitFor();
     await live.evaluate(() => { window.writeAllowed = false; });
     await live.locator('#reminder-toggle').click();
@@ -90,6 +96,14 @@ const path = require('node:path');
     await live.locator('#reminder-toggle').click();
     await live.locator('#reminder-toggle').filter({hasText: 'Включить'}).waitFor();
     assert.equal(enabled, false);
+    schedulerHealthy = false;
+    await live.locator('#reminder-refresh').click();
+    await live.locator('#reminder-delivery').filter({hasText: 'задерживается'}).waitFor();
+    assert.match(await live.locator('#reminder-status').textContent(), /Отключены/);
+    schedulerHealthy = true;
+    await live.locator('#reminder-refresh').click();
+    await live.locator('#reminder-delivery').filter({hasText: 'работает'}).waitFor();
+    await live.locator('#settings-close').click();
     for (const [mood, sprite] of Object.entries({
       calm: 'calm', happy: 'happy', sleeping: 'sleeping', hungry: 'hungry',
       tired: 'calm', dirty: 'grumpy', lonely: 'sad',
