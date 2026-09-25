@@ -11,6 +11,7 @@ from backend.game import SLEEP_SECONDS, Pet, evolve, sleep_remaining
 from backend.repository import PetRepository
 
 logger = logging.getLogger(__name__)
+PREFERENCE_KEYS = ("notify_hunger", "notify_mood", "notify_hygiene", "notify_sleep")
 CARE_INTERVAL = timedelta(hours=6)
 
 
@@ -60,6 +61,24 @@ class ReminderRepository(PetRepository):
             json={"telegram_id": user_id, "enabled": enabled},
         )
 
+    async def preferences(self, user_id: int) -> dict:
+        response = await self.request("GET", params={
+            "telegram_id": f"eq.{user_id}",
+            "select": "enabled," + ",".join(PREFERENCE_KEYS), "limit": "1",
+        })
+        rows = response.json()
+        return rows[0] if rows else {"enabled": False, **dict.fromkeys(PREFERENCE_KEYS, True)}
+
+    async def update_preferences(self, user_id: int, changes: dict):
+        await self.request(
+            "POST", params={"on_conflict": "telegram_id"},
+            headers={"Prefer": "resolution=ignore-duplicates"},
+            json={"telegram_id": user_id, "enabled": False},
+        )
+        await self.request(
+            "PATCH", params={"telegram_id": f"eq.{user_id}"}, json=changes,
+        )
+
     async def is_enabled(self, user_id: int) -> bool:
         response = await self.request("GET", params={
             "telegram_id": f"eq.{user_id}", "select": "enabled", "limit": "1",
@@ -76,6 +95,9 @@ class ReminderRepository(PetRepository):
 
     async def claim(self, row: dict, changes: dict) -> bool:
         params = {"telegram_id": f"eq.{row['telegram_id']}", "enabled": "eq.true"}
+        for key in PREFERENCE_KEYS:
+            if key in row:
+                params[key] = "eq.true" if row[key] else "eq.false"
         for key in changes:
             params[key] = f"eq.{row[key]}" if row[key] else "is.null"
         response = await self.request(
@@ -90,7 +112,7 @@ def reminder(row: dict, now: datetime) -> tuple[str, dict]:
         return "", {}
     # A cron tick can fall just after the final sleep reward. Do not lose that
     # notification merely because the pet has already automatically woken up.
-    if pet.sleep_started_at:
+    if pet.sleep_started_at and row.get("notify_sleep", True):
         end = pet.sleep_started_at + timedelta(seconds=SLEEP_SECONDS)
         notified = row["sleep_notified_at"]
         already_notified = (
@@ -105,7 +127,7 @@ def reminder(row: dict, now: datetime) -> tuple[str, dict]:
     if sleep_remaining(pet, now) > 0:
         start = pet.sleep_started_at.isoformat()
         notified = row["sleep_notified_at"]
-        if pet.energy >= 100 and (
+        if row.get("notify_sleep", True) and pet.energy >= 100 and (
             not notified or datetime.fromisoformat(notified) != pet.sleep_started_at
         ):
             return (
@@ -117,12 +139,12 @@ def reminder(row: dict, now: datetime) -> tuple[str, dict]:
     if last_care and now - datetime.fromisoformat(last_care) < CARE_INTERVAL:
         return "", {}
     needs = []
-    for stat, text in (
-        ("satiety", "🍎 Покорми меня — я проголодался."),
-        ("happiness", "🎾 Поиграй со мной — мне скучно."),
-        ("hygiene", "🛁 Помой меня — пора купаться."),
+    for stat, preference, text in (
+        ("satiety", "notify_hunger", "🍎 Покорми меня — я проголодался."),
+        ("happiness", "notify_mood", "🎾 Поиграй со мной — мне скучно."),
+        ("hygiene", "notify_hygiene", "🛁 Помой меня — пора купаться."),
     ):
-        if getattr(pet, stat) < 30:
+        if row.get(preference, True) and getattr(pet, stat) < 30:
             needs.append(text)
     if not needs:
         return "", {}

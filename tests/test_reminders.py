@@ -87,7 +87,7 @@ def test_reminder_settings_are_authenticated_and_independent_of_game_progress(mo
     from main import reminder_repository, repository
 
     reminders = AsyncMock()
-    reminders.is_enabled.return_value = False
+    reminders.preferences.return_value = {"enabled": False}
     pets = AsyncMock()
     monkeypatch.setattr("main.get_settings", lambda: SimpleNamespace(cron_secret=None))
     with TestClient(app) as client:
@@ -106,8 +106,12 @@ def test_reminder_settings_are_authenticated_and_independent_of_game_progress(mo
             assert response.headers["cache-control"] == "no-store"
             for enabled in (True, False):
                 response = client.patch("/api/reminders", json={"enabled": enabled})
-                assert response.json()["enabled"] is enabled
-                reminders.enable.assert_awaited_with(7, enabled)
+                reminders.update_preferences.assert_awaited_with(7, {"enabled": enabled})
+            response = client.patch("/api/reminders", json={"notify_hunger": False})
+            assert response.status_code == 200
+            reminders.update_preferences.assert_awaited_with(7, {"notify_hunger": False})
+            for invalid in ({}, {"notify_sleep": None}, {"notify_mood": "false"}):
+                assert client.patch("/api/reminders", json=invalid).status_code == 422
             pets.save.assert_not_awaited()
             assert client.patch("/api/reminders", json={"enabled": "false"}).status_code == 422
     finally:
@@ -211,3 +215,17 @@ def test_delivery_claim_conflicts_and_telegram_failures():
         bot.send_message.assert_not_awaited()
 
     asyncio.run(run())
+
+
+def test_individual_preferences_filter_delivery():
+    row = recipient()
+    row.update(notify_hunger=False, notify_mood=True, notify_hygiene=False)
+    text, _ = reminder(row, NOW + timedelta(hours=18))
+    assert "Поиграй" in text
+    assert "Покорми" not in text and "Помой" not in text
+    row["notify_mood"] = False
+    assert reminder(row, NOW + timedelta(hours=18)) == ("", {})
+    row = recipient(energy=94, sleep_started_at=NOW)
+    row["notify_sleep"] = False
+    assert reminder(row, NOW + timedelta(minutes=15)) == ("", {})
+    assert reminder(row, NOW + timedelta(minutes=32)) == ("", {})

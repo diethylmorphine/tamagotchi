@@ -13,7 +13,6 @@
 <p id="preview-banner" hidden>Превью · изменения не сохраняются</p>
 <main class="device">
 <header><button id="pet-picker-open" type="button" aria-label="Выбрать питомца" aria-haspopup="dialog" disabled><img id="pet-picker-icon" src="/assets/pets/cat-calm.webp" alt="" width="30" height="30"><span>Питомец</span><span aria-hidden="true">⌄</span></button><span class="brand">Tamagotchi<br><b>FWN</b></span><button id="leaderboard-open" type="button" aria-label="Таблица лидеров" aria-haspopup="dialog" disabled><span aria-hidden="true">♛</span> Топ-5</button></header>
-<nav class="game-menu" aria-label="Меню игры"><button id="settings-open" type="button" aria-haspopup="dialog"><span aria-hidden="true">⚙</span> Настройки уведомлений</button></nav>
 <section class="screen">
 <div class="screen-top"><span id="pet-edition">VIRTUAL PET / 01</span><span id="level">LVL —</span></div>
 <div class="name-row"><h1 id="name">···</h1><button id="rename" aria-label="Переименовать питомца" disabled>✎</button></div>
@@ -43,6 +42,19 @@
 </section>
 <p id="message" role="status" aria-live="polite">Загрузка…</p>
 <button id="retry" hidden>Обновить состояние</button>
+<section id="notification-settings" aria-labelledby="settings-title">
+<h2 id="settings-title">Уведомления</h2>
+<p class="settings-description">Напоминания приходят в личный чат с ботом, даже когда игра закрыта.</p>
+<section class="reminder-control" aria-label="Подписка на уведомления">
+<div><strong>Напоминания в Telegram</strong><p id="reminder-status" role="status">Проверяем подписку…</p></div>
+<button id="reminder-toggle" type="button" disabled>Включить</button>
+</section>
+<p id="reminder-delivery" class="settings-description" role="status"></p>
+<fieldset id="reminder-types"><legend>Какие уведомления присылать</legend><label><input type="checkbox" data-preference="notify_hunger" disabled> 🍎 Пора покормить</label><label><input type="checkbox" data-preference="notify_mood" disabled> 🎾 Питомцу скучно</label><label><input type="checkbox" data-preference="notify_hygiene" disabled> 🛁 Пора искупать</label><label><input type="checkbox" data-preference="notify_sleep" disabled> ☀️ Питомец выспался</label></fieldset><p class="settings-description">Выбор сохраняется автоматически. Напоминания об уходе — не чаще раза в 6 часов.</p>
+<p class="settings-description">Если сообщений нет, открой чат с ботом и отправь /start. Также проверь, что бот не заблокирован и чат не заглушён.</p>
+<button id="reminder-refresh" class="secondary-button" type="button">Проверить статус</button>
+
+</section>
 <details id="admin-panel" hidden>
 <summary>Администрирование</summary>
 <form id="admin-search">
@@ -62,19 +74,6 @@
 </details>
 <footer><span>✦</span><i></i><i></i><i></i><span>✦</span></footer>
 </main>
-<dialog id="settings-dialog" aria-labelledby="settings-title">
-<h2 id="settings-title">Уведомления</h2>
-<p class="settings-description">Напоминания приходят в личный чат с ботом, даже когда игра закрыта.</p>
-<section class="reminder-control" aria-label="Подписка на уведомления">
-<div><strong>Напоминания в Telegram</strong><p id="reminder-status" role="status">Проверяем подписку…</p></div>
-<button id="reminder-toggle" type="button" disabled>Включить</button>
-</section>
-<p id="reminder-delivery" class="settings-description" role="status"></p>
-<ul class="settings-description"><li>Уход: если питомец голоден, грустит или нуждается в купании. Не чаще раза в 6 часов.</li><li>Сон: когда питомец выспался.</li></ul>
-<p class="settings-description">Если сообщений нет, открой чат с ботом и отправь /start. Также проверь, что бот не заблокирован и чат не заглушён.</p>
-<button id="reminder-refresh" class="secondary-button" type="button">Проверить статус</button>
-<button id="settings-close" class="secondary-button" type="button">Закрыть</button>
-</dialog>
 <dialog id="pet-picker" aria-labelledby="pet-picker-title" aria-describedby="pet-picker-description">
 <p class="eyebrow">ТВОЙ МАЛЕНЬКИЙ МИР</p>
 <h2 id="pet-picker-title">Кто будет рядом?</h2>

@@ -109,14 +109,18 @@ async def reminder_status(
 ):
     response.headers["Cache-Control"] = "no-store"
     return {
-        "enabled": await repo.is_enabled(user_id),
+        **await repo.preferences(user_id),
         **await delivery_status(repo),
     }
 
 
 class ReminderRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    enabled: bool = Field(strict=True)
+    enabled: bool | None = Field(default=None, strict=True)
+    notify_hunger: bool | None = Field(default=None, strict=True)
+    notify_mood: bool | None = Field(default=None, strict=True)
+    notify_hygiene: bool | None = Field(default=None, strict=True)
+    notify_sleep: bool | None = Field(default=None, strict=True)
 
 
 @app.patch("/api/reminders")
@@ -127,8 +131,11 @@ async def update_reminders(
     reminders: ReminderRepository = Depends(reminder_repository),
 ):
     await repo.get_or_create(user_id)
-    await reminders.enable(user_id, body.enabled)
-    return {"enabled": body.enabled, **await delivery_status(reminders)}
+    changes = body.model_dump(exclude_unset=True)
+    if not changes or any(value is None for value in changes.values()):
+        raise HTTPException(422, "Выбери настройки уведомлений")
+    await reminders.update_preferences(user_id, changes)
+    return {**await reminders.preferences(user_id), **await delivery_status(reminders)}
 
 
 @app.get("/api/session")

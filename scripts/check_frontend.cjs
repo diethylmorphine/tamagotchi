@@ -30,10 +30,9 @@ const path = require('node:path');
       await page.setViewportSize({width, height: 900});
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     }
-    await page.locator('#settings-open').click();
-    assert.equal(await page.locator('#settings-dialog').isVisible(), true);
+    assert.equal(await page.locator('#notification-settings').isVisible(), true);
     assert.equal(await page.locator('#reminder-toggle').isDisabled(), true);
-    await page.locator('#settings-close').click();
+
 
     // No real Telegram credentials and no real backend writes are used in this context.
     const live = await browser.newPage({viewport: {width: 390, height: 950}});
@@ -50,6 +49,7 @@ const path = require('node:path');
       stats: {satiety: 82, happiness: 94, hygiene: 76, energy: 48},
       cooldown_seconds: 0, sleep_remaining_seconds: 0, can_wake: false};
     let enabled = false;
+    let preferences = {notify_hunger: true, notify_mood: true, notify_hygiene: true, notify_sleep: true};
     let failSpecies = false;
     let reminderWrites = 0;
     let schedulerHealthy = true;
@@ -64,8 +64,8 @@ const path = require('node:path');
         pet = {...pet, species: request.postDataJSON().species};
         data = pet;
       } else if (url === '/api/reminders') {
-        if (request.method() === 'PATCH') { enabled = request.postDataJSON().enabled; reminderWrites++; }
-        data = {enabled, configured: true, scheduler_healthy: schedulerHealthy};
+        if (request.method() === 'PATCH') { const changes = request.postDataJSON(); if (changes.enabled !== undefined) enabled = changes.enabled; preferences = {...preferences, ...changes}; reminderWrites++; }
+        data = {...preferences, enabled, configured: true, scheduler_healthy: schedulerHealthy};
       } else throw new Error('Unexpected API request: ' + url);
       await route.fulfill({json: data});
     });
@@ -83,7 +83,7 @@ const path = require('node:path');
     await live.locator('#pet-picker-message').filter({hasText: 'Тестовая ошибка'}).waitFor();
     assert.equal(await live.locator('body').getAttribute('data-species'), 'fox');
     await live.locator('#pet-picker-close').click();
-    await live.locator('#settings-open').click();
+
     await live.locator('#reminder-toggle').filter({hasText: 'Включить'}).waitFor();
     await live.evaluate(() => { window.writeAllowed = false; });
     await live.locator('#reminder-toggle').click();
@@ -96,6 +96,13 @@ const path = require('node:path');
     await live.locator('#reminder-toggle').click();
     await live.locator('#reminder-toggle').filter({hasText: 'Включить'}).waitFor();
     assert.equal(enabled, false);
+    await live.locator('[data-preference="notify_hunger"]').uncheck();
+    await live.waitForFunction(() => !document.querySelector('[data-preference="notify_hunger"]').disabled);
+    assert.equal(preferences.notify_hunger, false);
+    assert.equal(preferences.notify_sleep, true);
+    await live.reload();
+    await live.waitForFunction(() => !document.querySelector('[data-preference="notify_hunger"]').disabled);
+    assert.equal(await live.locator('[data-preference="notify_hunger"]').isChecked(), false);
     schedulerHealthy = false;
     await live.locator('#reminder-refresh').click();
     await live.locator('#reminder-delivery').filter({hasText: 'задерживается'}).waitFor();
@@ -103,7 +110,7 @@ const path = require('node:path');
     schedulerHealthy = true;
     await live.locator('#reminder-refresh').click();
     await live.locator('#reminder-delivery').filter({hasText: 'работает'}).waitFor();
-    await live.locator('#settings-close').click();
+
     for (const [mood, sprite] of Object.entries({
       calm: 'calm', happy: 'happy', sleeping: 'sleeping', hungry: 'hungry',
       tired: 'calm', dirty: 'grumpy', lonely: 'sad',
