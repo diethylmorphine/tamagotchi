@@ -1,282 +1,78 @@
-# Tamagotchi-Fawn | Tamagotchi FWN
+# Tamagotchi-Fawn
 
-Скелет Telegram Mini App: **aiogram 3 + FastAPI + Supabase Postgres + Vercel**.
-Один проект и домен: FastAPI отдаёт HTML, API и принимает webhook Telegram.
-Frontend — простой HTML/CSS/JS без сборки, чтобы сначала развивать механику.
+Telegram Mini App virtual pet game built with FastAPI, aiogram, Supabase Postgres, and a plain HTML/CSS/JavaScript frontend.
 
-## Структура
+## Preview
 
-```text
-main.py                          # FastAPI, маршруты, webhook, статика
-backend/
-  auth.py                        # Проверка подписи и срока Telegram initData
-  bot.py                         # aiogram: /start и кнопка Mini App
-  config.py                      # Переменные окружения
-  game.py                        # Чистая логика питомца
-  repository.py                  # Supabase REST, условные обновления
-frontend/
-  index.html                     # Экран питомца
-  assets/app.js                  # Telegram SDK и вызовы API
-  assets/style.css               # Минимальные стили
-supabase/migrations/0001_pets.sql # Таблица, ограничения и RLS
-scripts/set_webhook.py           # Регистрация webhook и кнопки меню
-tests/                           # Авторизация, механика, API
-vercel.json                      # FastAPI preset
-pyproject.toml                   # Зависимости проекта и настройки инструментов
-uv.lock                          # Зафиксированные версии для сборки Vercel
-.env.example                     # Шаблон настроек
-```
+<!-- TODO: add an up-to-date screenshot or GIF of the game here. -->
 
-## Что уже работает в коде
+## Tech stack
 
-- `/start` отправляет кнопку открытия игры в личном чате.
-- Первый авторизованный вход создаёт одного питомца на Telegram ID.
-- Кнопка «Питомец» слева сверху переключает кота и лису, сохраняя имя и прогресс.
-  Кот использует фиолетовую тему, лиса — янтарную. Эмоции меняются по состоянию питомца.
-- Сытость, настроение, энергия, чистота: 0–100.
-- За час отсутствия: −4 сытости, −3 настроения, −2 энергии, −3 чистоты.
-- Покормить: +25 сытости; поиграть: +25 настроения, −15 энергии, −5 сытости.
-- Искупать: +30 чистоты; сон: 30 минут с предупреждением и блокировкой кнопок ухода.
-- Во сне все показатели падают в 4 раза медленнее; на 10-й, 20-й и 30-й минутах — +8 энергии (до 100).
-- Полная энергия сохраняется до конца сна. При 100 энергии появляется кнопка «Разбудить»;
-  раннее пробуждение не даёт XP. Через 30 минут питомец просыпается автоматически.
-- Бот напоминает покормить, поиграть и помыть при показателях ниже 30; сообщает о полной
-  энергии во время сна. Для доставки требуется настройка расписания ниже.
-- Успешное действие даёт 10 XP, каждые 100 XP — новый уровень.
-- Общая пауза между действиями — 10 секунд. При основном показателе >95 действие отклоняется.
-- Питомец не умирает. Сон продолжается офлайн и после перезагрузки; по пробуждении возвращается обычное падение показателей.
+- Python 3.12+, FastAPI, aiogram 3
+- Supabase Postgres via its REST API
+- HTML, CSS, and JavaScript (no frontend build step)
+- Vercel deployment
 
-Время и награды определяет сервер. Показатели пересчитываются при чтении, а сохраняются
-при действии. Поэтому фоновые таймеры и cron для деградации не нужны.
-Для отправки сообщений нужен отдельный cron, описанный в разделе «Напоминания».
-Обновление использует `WHERE version = previous_version`: одновременные запросы не
-перезаписывают прогресс. После конфликта правила проверяются заново.
+## Quick start
 
-## Локальный запуск (PowerShell, Python 3.12+)
+- [Local setup](#run-locally)
+- [Supabase setup](#configure-supabase)
+- [Tests and lint](#checks)
+- [Project history and known limitations](docs/CHANGELOG.md)
+- [Deployment and Telegram webhook](docs/releases/2026-09-21-pets.md)
+- [Detailed project and operations guide](docs/README.md)
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python -m pip install -r requirements-dev.txt
-Copy-Item .env.example .env
-# Заполнить .env своими значениями
-.\.venv\Scripts\python -m uvicorn main:app --reload
-```
+## Run locally
 
-Открыть `http://127.0.0.1:8000`: вне Telegram виден каркас с подсказкой входа,
-игровые запросы требуют настоящего `initData`. Swagger: `/docs`, healthcheck: `/api/health`.
-Для полноценной локальной игры нужен HTTPS-туннель на порт 8000: его адрес записать
-в `WEBAPP_URL` и запустить регистрацию webhook. Используйте отдельного тестового бота:
-у одного бота только один webhook, регистрация заменяет предыдущий адрес.
+Use a separate test bot: registering a webhook replaces the current webhook for that bot. A real Mini App session also needs a reachable HTTPS URL and a Supabase project.
 
-## Supabase
+1. Create a bot with `@BotFather` and a Supabase project. Apply every migration in `supabase/migrations/` in filename order in the Supabase SQL Editor.
+2. Create a virtual environment and install the development dependencies:
 
-1. Создать проект Supabase.
-2. Выполнить миграции из `supabase/migrations/` в порядке номера в SQL Editor.
-   Перед запуском версии со сном применить `0005_sleep.sql` — она добавляет время начала сна.
-   Уже выполненные миграции повторять не нужно. `0002_pet_names.sql` добавляет выбор имени,
-   `0003_fawn_branding.sql` заменяет техническое имя у питомцев, которым игрок ещё не дал имя.
-   Выбранные игроками имена и прогресс сохраняются.
-3. Из настроек API скопировать URL проекта и **legacy `service_role` key** в
-   `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY`.
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\python -m pip install -r requirements-dev.txt
+   ```
 
-Ключ доступен только Python backend. Frontend не обращается в Supabase напрямую.
-У таблицы включён RLS, права `anon` и `authenticated` отозваны; backend с
-`service_role` проверяет Telegram-подпись и ограничивает запросы ID владельца.
-Supabase Auth для этого скелета не используется.
+3. Copy `.env.example` to `.env`; set `BOT_TOKEN`, `WEBAPP_URL`, `WEBHOOK_SECRET`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`. Use a random webhook secret with at least 16 characters. Add Telegram admin IDs only if testing admin tools.
+4. Start the app:
 
-## Vercel и Telegram
+   ```powershell
+   .\.venv\Scripts\python -m uvicorn main:app --reload
+   ```
 
-1. Создать бота через `@BotFather`, получить `BOT_TOKEN`.
-2. Загрузить проект в Git и импортировать в Vercel, Root Directory — корень репозитория.
-   Preset — **FastAPI**. Пользовательские Build Command и Output Directory не нужны.
-3. Добавить переменные из `.env.example` в Vercel:
-   - `BOT_TOKEN` — токен бота;
-   - `WEBAPP_URL` — постоянный HTTPS production-адрес проекта, без пути;
-   - `WEBHOOK_SECRET` — случайная строка 16–256 символов `[A-Za-z0-9_-]`;
-   - `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY`;
-   - `INIT_DATA_TTL_SECONDS` — по умолчанию 3600.
-4. Выполнить deploy/redeploy после настройки переменных. `/api/health` должен отвечать
-   `{"status":"ok"}`; это проверка приложения, не соединения с БД.
-5. Production-домен должен быть доступен Telegram без Vercel login/deployment protection.
-6. В локальном `.env` указать те же значения и выполнить:
+5. Open `http://127.0.0.1:8000` to see the shell. Outside Telegram, gameplay requests cannot authenticate: for a real game session, expose port 8000 through an HTTPS tunnel, set its address as `WEBAPP_URL`, then register the webhook/menu with `python -m scripts.set_webhook`.
 
-```powershell
-.\.venv\Scripts\python -m scripts.set_webhook
-```
+### What requires external services
 
-Скрипт зарегистрирует `/api/telegram/webhook` с секретом и кнопку меню «Мой питомец».
-Затем отправить `/start` боту и открыть игру. Для Main Mini App в профиле бота можно
-дополнительно задать тот же URL через `@BotFather`.
+- A valid Telegram `initData` and Telegram bot are required for authenticated gameplay and webhook handling.
+- A Supabase project with the migrations applied is required to persist pets and profiles.
+- HTTPS tunneling is required for Telegram to open the local Mini App and deliver webhooks.
+- Reminder delivery additionally requires the configured `CRON_SECRET` and the scheduled Supabase `pg_cron`/`pg_net` setup documented in [the operations guide](docs/README.md).
+- Without those services, the local page shell and automated unit tests work, but there is no end-to-end playable account.
 
-Webhook обрабатывается до ответа HTTP; long polling на Vercel не запускается.
-Не назначайте production-боту случайные preview URL. При истечении авторизации
-пользователь должен закрыть и заново открыть Mini App.
+## Data & Privacy
 
-## API
+- On authenticated sessions, the backend records a player's Telegram ID, first and last name, username, pet name, pet state, XP, and reminder preferences in Supabase. Telegram IDs identify the pet record; profile fields are refreshed from verified Telegram `initData`.
+- A user-submitted bug report contains the report text and Telegram ID and is sent to the Telegram IDs configured in `ADMIN_TELEGRAM_IDS`. Reports are not stored in the app database.
+- The repository has no self-service account deletion endpoint. To delete a user's app data, an operator with Supabase access can delete that row in `public.pets`; `public.pet_reminders` references it with `ON DELETE CASCADE`. Use the SQL Editor and substitute the user's numeric Telegram ID:
 
-| Метод | Путь | Назначение |
-|---|---|---|
-| GET | `/api/health` | Проверка процесса |
-| GET | `/api/pet` | Создать при первом входе / получить питомца |
-| POST | `/api/pet/actions` | `{"action":"feed"}`; также `play`, `wash`, `rest`, `wake` |
-| PATCH | `/api/pet/name` | `{"name":"Пиксель"}` — первое имя или переименование, 1–24 символа |
-| PATCH | `/api/pet/species` | `{"species":"cat"}` или `{"species":"fox"}` — вид без сброса прогресса |
-| GET | `/api/reminders` | Подписка и свежесть последнего завершённого запуска планировщика |
-| PATCH | `/api/reminders` | `{"enabled":true}` или `false` — подписка текущего пользователя |
-| POST | `/api/telegram/webhook` | Обновления Telegram с секретным заголовком |
+  ```sql
+  delete from public.pets where telegram_id = 123456789;
+  ```
 
-Игровые запросы: `Authorization: tma <Telegram.WebApp.initData>`.
-Обычные игровые маршруты не принимают ID пользователя и показатели из тела запроса.
+- Telegram's own messages and data retained by Telegram are outside this database deletion.
 
-## Напоминания
+## Checks
 
-1. Применить все ещё не выполненные миграции по порядку, включая `0006_reminders.sql`,
-   `0007_pet_species.sql` и `0008_reminder_scheduler.sql`, перед обновлением приложения.
-2. Добавить в Vercel `CRON_SECRET` — отдельную случайную строку минимум из 32 символов —
-   и развернуть новую версию. Без секрета маршрут отправки закрыт.
-3. В Supabase включить расширения `pg_cron` и `pg_net`. В Vault создать секреты
-   `reminder_base_url` (production-адрес без завершающего `/`) и `reminder_cron_secret`
-   (то же значение, что `CRON_SECRET` в Vercel).
-4. Выполнить `scripts/schedule_reminders.sql`: проверка каждые 5 минут, даже с закрытой игрой.
-   Повторный запуск обновляет задание с тем же именем. Проверять результаты можно
-   в Supabase Cron и `net._http_response` — HTTP-ошибки могут не отражаться как ошибки cron.
-5. В игре нажать «Включить» в блоке напоминаний и разрешить сообщения от бота
-   (Telegram 6.9+). Альтернатива: отправить боту `/start` в личном чате.
-   Старые версии не сохраняли подписку; существующим игрокам тоже нужно включить её.
-   «Отключить» в игре или `/stop` отключают сообщения, `/start` включает снова.
-
-Уход: одно сообщение со всеми текущими потребностями, не чаще раза в 6 часов.
-Во сне напоминания об уходе не отправляются. При полной энергии — отдельное сообщение
-один раз за текущий сон. Если раннего сообщения не было, в течение часа после окончания
-сна отправляется сообщение о пробуждении — даже если энергия достигла 100 на последнем тике.
-После нового действия игрока или уже отправленного сообщения повтор не приходит.
-Питомцы без выбранного имени пропускаются. У сообщений есть кнопка открытия игры.
-Блокировка бота отключает подписку. Условная запись в отдельной таблице защищает
-от дублей при параллельных запусках и сохраняется после перезапуска приложения.
-При неопределённом результате доставки повтор не выполняется: сообщение могло дойти.
-Из-за этого сетевой сбой или остановка процесса после резервирования могут пропустить
-одно напоминание. При явном ограничении Telegram резервирование снимается для следующего cron.
-
-Маршрут: `POST /api/cron/reminders`, заголовок `Authorization: Bearer <CRON_SECRET>`.
-Не вызывается из браузера; ключи не помещаются во frontend. Планировщик настраивается
-отдельно от webhook Telegram. Инструкция использует
-[Supabase Cron с pg_net и Vault](https://supabase.com/docs/guides/functions/schedule-functions).
-
-После каждого полного прохода записывается время завершения в `reminder_scheduler`.
-Игра предупреждает, если секрет не настроен или планировщик не завершал проверку
-последние 15 минут. Свежий запуск подтверждает работу планировщика, но не доставку
-каждого сообщения: ошибки Telegram отражаются в счётчике `failed`.
-Проверка без отправки сообщений: `python -m scripts.check_reminders`, затем
-`scripts/diagnose_reminders.sql` в SQL Editor. Скрипт не выводит токены и персональные данные.
-`last_care_at` — резервирование попытки отправки, а не подтверждение получения сообщения.
-
-Включение доступа использует официальный
-[Telegram requestWriteAccess](https://core.telegram.org/bots/webapps#initializing-mini-apps).
-
-## Проверки
-
-### Администрирование
-
-Перед запуском обновлённой версии выполните миграцию `0004_owner_profiles.sql`.
-В серверной переменной `ADMIN_TELEGRAM_IDS` укажите список Telegram ID в формате JSON,
-например `ADMIN_TELEGRAM_IDS=[123456789,987654321]`, и перезапустите приложение.
-По умолчанию список пуст и админский доступ закрыт для всех.
-
-Администраторы увидят раздел «Администрирование» под игровыми кнопками.
-Он показывает список пользователей с переходом на следующую страницу и поиск по Telegram ID,
-имя владельца, username и имя питомца. Имена владельцев берутся из проверенной Telegram
-авторизации при открытии приложения; у старых пользователей появятся после следующего входа.
-Можно изменять уровень (1–1 000 000) и четыре показателя (0–100).
-При изменении уровня XP внутри уровня сохраняется; неизменённые показатели учитывают
-время отсутствия. Конфликт с действием игрока требует обновления данных перед сохранением.
-
-API администратора (та же Telegram-авторизация, дополнительная серверная проверка роли):
-
-- `GET /api/session` — сохранить профиль и получить признак `is_admin`.
-- `GET /api/admin/pets?after=0&limit=20` — список, курсор следующей страницы `next_after`.
-- `GET /api/admin/pets/{telegram_id}` — данные конкретного питомца без создания нового.
-- `PATCH /api/admin/pets/{telegram_id}` — обязательная `version` из чтения и изменяемые
-  поля: `level`, `satiety`, `happiness`, `energy`, `hygiene`. Например:
-  `{"version":0,"level":5,"satiety":100}`.
-
-### Автоматические проверки
-
-Vercel устанавливает зависимости из `pyproject.toml` и `uv.lock`.
-После изменения зависимостей обновить lock-файл командой `uv lock`.
-`requirements.txt` — экспорт для локального запуска через pip; обновлять его командой
-`uv export --no-dev --no-hashes --no-emit-project --output-file requirements.txt`.
-Для локальной установки через uv можно использовать `uv sync --locked`.
+The test suite uses mocked services and does not need real credentials:
 
 ```powershell
 .\.venv\Scripts\python -m pytest
 .\.venv\Scripts\python -m ruff check .
 ```
 
-Тесты не требуют реальных ключей. Проверяют подпись/срок авторизации, офлайн-изменения,
-награды, паузу между действиями, конфликт обновлений и доступность маршрутов.
-Реальную миграцию и сквозной сценарий Telegram → Vercel → Supabase нужно проверить
-после подключения сервисов.
+## Project notes
 
-## Следующие этапы
-
-- Инвентарь, магазин, задания и баланс экономики.
-- Журнал действий и ключи идемпотентности перед добавлением покупок/валюты.
-- Распределённый rate limit и мониторинг ошибок перед публичным запуском.
-
-Сейчас сетевые ошибки не вызывают автоматический повтор действия; кнопка повторного
-подключения перечитывает состояние. Webhook `/start` пока не хранит `update_id`, поэтому
-повторная доставка Telegram может отправить повторное приветствие.
-
-Архитектура сверена с документацией:
-[Vercel FastAPI](https://vercel.com/docs/frameworks/backend/fastapi),
-[aiogram Webhook](https://docs.aiogram.dev/en/latest/dispatcher/webhook.html),
-[Telegram Mini Apps](https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app),
-[Supabase API security](https://supabase.com/docs/guides/api/securing-your-api).
-
-## Обновление: реакции и дружба
-
-Питомец показывает семь состояний: сон, голод, усталость, потребность в купании,
-одиночество, радость и спокойствие. Сервер выбирает состояние по актуальным
-офлайн-показателям; сон имеет приоритет, потребность появляется ниже 30,
-радость при всех показателях от 70. Рядом со спрайтом есть символ и текстовая подсказка.
-Анимации отключаются при системной настройке уменьшения движения.
-
-Уровни 2, 5 и 10 открывают титулы «Знакомые», «Друзья», «Неразлучные».
-Карточка показывает следующую веху и недостающий XP. Старые игроки сразу получают
-отображение текущего титула; изменение уровня администратором пересчитывает его.
-Новые поля ответа питомца: `mood`, `current_title`, `next_milestone`.
-Это визуальный прогресс без дополнительных выплат, миграции БД не нужны.
-
-## Обновление: кот, лиса и доставка напоминаний
-
-После `/start` бот показывает русское меню: открыть питомца, включить или отключить
-уведомления, сообщить об ошибке и подписаться на канал `https://t.me/iamdiethylmorphine`.
-Команда `/menu` открывает меню без изменения подписки; `/start` включает напоминания,
-как и раньше. `/stop` отключает их.
-
-Кнопка «Сообщить об ошибке» и `/report` запрашивают текст ответом на сообщение бота.
-Бот отправляет описание и Telegram ID игрока администраторам из `ADMIN_TELEGRAM_IDS`.
-Администраторы должны заранее открыть личный чат с ботом. `/cancel` возвращает меню.
-Без настроенных администраторов бот сообщает, что приём ошибок недоступен.
-
-После обновления меню повторно выполнить `python -m scripts.set_webhook`:
-Telegram должен присылать и `message`, и `callback_query`. Скрипт сохраняет
-ожидающие команды. Для настройки с уже сохранёнными production-ключами доступны
-`GET /api/cron/telegram` (диагностика) и `POST /api/cron/telegram` (регистрация
-webhook и кнопки игры), оба требуют `Authorization: Bearer <CRON_SECRET>`.
-Ответ содержит только состояние доставки, без токена бота и webhook-секрета.
-
-Порядок выпуска и диагностика: [инструкция обновления](docs/releases/2026-09-21-pets.md).
-Этому обновлению нужны миграции `0007` и `0008` поверх ранее применённых.
-
-Локальное визуальное превью: `http://127.0.0.1:8000/?preview=fox` или `?preview=cat`.
-Оно доступно вне Telegram, использует демонстрационные показатели и не вызывает API.
-Кнопка выбора работает локально; уход отключён. При настоящем Telegram initData
-параметр preview игнорируется — игра всегда использует данные сервера.
-
-Готовые прозрачные WebP-спрайты уже находятся в `frontend/assets/pets/`.
-Node.js для деплоя не нужен. Для повторной нарезки исходных атласов требуется `sharp`:
-`node scripts/prepare_pet_assets.cjs`. Источники и промпты: `output/pet-emotions/`.
-Проверка интерфейса требует работающего локального uvicorn и пакета `playwright`:
-`node scripts/check_frontend.cjs`. При необходимости задайте `BROWSER_EXECUTABLE`
-и `NODE_PATH`; скрипт использует тестовые ответы API и не отправляет сообщения.
+- Server time determines game actions and rewards. Pet state is recalculated on read and persisted on actions; conditional `version` updates prevent concurrent requests from silently overwriting one another.
+- Planned work and known limitations are listed in [the detailed guide](docs/README.md). Historical release notes are in [docs/releases](docs/releases/).
