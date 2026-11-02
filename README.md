@@ -4,7 +4,7 @@ Telegram Mini App virtual pet game built with FastAPI, aiogram, Supabase Postgre
 
 ## Preview
 
-<!-- TODO: add an up-to-date screenshot or GIF of the game here. -->
+![Tamagotchi FWN preview](docs/screenshots/tamagotchi.png)
 
 ## Tech stack
 
