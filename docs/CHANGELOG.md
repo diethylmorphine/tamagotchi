@@ -12,6 +12,7 @@ This is a short history of shipped milestones. Current setup and behavior are do
 ## November 2026
 
 - Added the snow leopard (ирбис) as a third selectable species with its own cool grey-blue theme. Apply migration `0010_snow_leopard.sql` before deploying.
+- Gave each pet its own pixel-art scene behind it: a night room for the cat, an autumn forest at sunset for the fox, and snowy peaks under the aurora for the snow leopard. Stars twinkle, leaves and snow fall, and the scene dims while the pet sleeps.
 
 ## Current limitations
 

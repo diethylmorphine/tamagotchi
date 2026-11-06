@@ -14,7 +14,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:4px
 .screen-top{display:flex;justify-content:space-between;padding:14px 12px 0;font:8px 'Press Start 2P',monospace;color:var(--muted);gap:6px}.screen-top #level{color:var(--accent);white-space:nowrap}
 .name-row{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 14px 0;min-height:54px}h1{font-size:24px;letter-spacing:.5px;margin:0;color:var(--text);overflow-wrap:anywhere;text-shadow:0 2px #654391}#rename{background:transparent;border:1px solid var(--border);border-radius:6px;font-size:19px;flex-shrink:0;width:36px;height:36px;color:var(--accent)}
 .habitat{height:235px;position:relative;display:grid;place-items:center;overflow:hidden;background-image:radial-gradient(circle,#9778d8 1px,transparent 1px),radial-gradient(circle,#575392 1px,transparent 1px);background-size:57px 61px,83px 43px;background-position:10px 13px,30px 7px}.habitat:after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(transparent 0 3px,#00000015 3px 4px)}
-.pet{position:relative;z-index:2;image-rendering:pixelated;filter:drop-shadow(0 0 15px #965bfa66);animation:float 3s ease-in-out infinite}.pet.react{animation:bounce .55s ease}.pet-shadow{position:absolute;bottom:23px;width:125px;height:15px;border-radius:50%;background:#9754ff4d;box-shadow:0 0 23px #8956db66}.orbit{position:absolute;width:192px;height:192px;border:1px solid #7f4eaf35;border-radius:50%;box-shadow:0 0 35px #9846ed17}.star{position:absolute;color:#bda0ff;font-size:20px}.s1{left:24px;top:40px}.s2{right:32px;top:70px;color:#6cd8ed}.s3{right:53px;bottom:35px}.s4{left:46px;bottom:55px;color:#8471c1}.floor{position:absolute;height:35px;bottom:0;width:100%;background:linear-gradient(transparent,#7042bf22);border-bottom:1px solid #604096}
+.pet{position:relative;z-index:2;image-rendering:pixelated;filter:drop-shadow(0 0 15px #965bfa66);animation:float 3s ease-in-out infinite}.pet.react{animation:bounce .55s ease}.pet-shadow{position:absolute;bottom:23px;width:125px;height:15px;border-radius:50%;background:#9754ff4d;box-shadow:0 0 23px #8956db66}.floor{position:absolute;height:35px;bottom:0;width:100%;background:linear-gradient(transparent,#7042bf22);border-bottom:1px solid #604096}
 .experience{display:flex;align-items:center;gap:14px;padding:12px;font:8px 'Press Start 2P',monospace;color:var(--muted)}.experience span{white-space:nowrap}.experience progress{height:5px;flex:1;min-width:0}
 #stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 10px 12px}.stat{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:9px 8px}.stat-label{display:flex;justify-content:space-between;font-size:11px;gap:4px;margin-bottom:8px;color:var(--muted)}.stat-label span{color:var(--stat-color)}progress{display:block;width:100%;height:9px;appearance:none;border:0;background:var(--track);border-radius:1px;overflow:hidden;accent-color:var(--stat-color,#a57ae5)}progress::-webkit-progress-bar{background:var(--track)}progress::-webkit-progress-value{background:var(--stat-color,#a57ae5)}progress::-moz-progress-bar{background:var(--stat-color,#a57ae5)}.meter{position:relative}.meter:after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 3px),var(--panel) calc(10% - 3px) 10%);pointer-events:none}
 .actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:18px 0 0}.actions button{display:flex;align-items:center;flex-direction:column;gap:7px;padding:10px 2px;border:1px solid var(--border);border-bottom:4px solid #0d0919;border-radius:9px;background:linear-gradient(var(--raised),#211830);font-size:10px;color:#c4a5e4;box-shadow:inset 0 1px #a480c83d}.actions button:active:not(:disabled){transform:translateY(2px);border-bottom-width:2px}.action-icon{font-size:29px;line-height:32px;color:#ba8af4;text-shadow:2px 2px #694085}.actions button:first-child .action-icon{color:#f28cd1}.actions button:nth-child(3) .action-icon{color:#70d8e6}
@@ -36,7 +36,6 @@ header{gap:8px;padding-left:4px;padding-right:4px}.brand{min-width:0;line-height
 .milestone-label{display:block;font-size:9px;letter-spacing:1.5px;color:var(--muted);margin-bottom:7px}#milestone-title{display:block;font-size:14px;color:var(--text)}#milestone-detail{margin:6px 0 0;font-size:11px;line-height:1.6;color:var(--muted)}
 @keyframes breathe{50%{transform:translateY(3px) scale(.98)}}
 @media(prefers-reduced-motion:reduce){.habitat .pet,.habitat .pet.react{animation:none}}
-
 /* Pet-driven theme: the same device, two distinct little worlds. */
 html{background:var(--page)}
 body{color:var(--text);background:radial-gradient(ellipse at 50% 28%,color-mix(in srgb,var(--glow) 18%,var(--page)),var(--page) 75%);padding:24px 14px max(24px,env(safe-area-inset-bottom))}
@@ -61,13 +60,8 @@ header{gap:8px;padding:2px 3px 16px}
 .habitat[data-mood="happy"] .pet{filter:drop-shadow(0 0 18px color-mix(in srgb,var(--glow) 40%,transparent))}
 .habitat[data-mood="sleeping"] .pet{filter:brightness(.88) drop-shadow(0 0 10px color-mix(in srgb,var(--glow) 25%,transparent))}
 .pet-shadow{bottom:15px;width:180px;height:15px;background:color-mix(in srgb,var(--glow) 23%,transparent);box-shadow:0 0 25px color-mix(in srgb,var(--glow) 40%,transparent)}
-.orbit{width:250px;height:250px;top:6px;border:2px solid color-mix(in srgb,var(--border) 22%,transparent);box-shadow:none}
-.star{color:var(--accent);text-shadow:0 0 12px color-mix(in srgb,var(--glow) 60%,transparent)}
-.s1{left:27px;top:65px}.s2{right:25px;top:102px;color:var(--accent)}.s3{right:35px;bottom:55px}.s4{left:37px;bottom:90px;color:var(--muted)}
 #mood-symbol{right:25px;top:20px;min-width:30px;padding:0;border:0;background:none;color:var(--accent);font-size:22px}
 .floor{height:37px;background:linear-gradient(transparent,color-mix(in srgb,var(--glow) 12%,transparent));border:0}
-.habitat-plants{position:absolute;inset:auto 10px 12px;display:flex;justify-content:space-between;z-index:-1;color:color-mix(in srgb,var(--accent) 30%,transparent);font-size:80px;line-height:1}
-.habitat-plants span{transform:rotate(-70deg)}.habitat-plants span+span{transform:rotate(70deg)}
 #pet-mood{padding:6px 12px 10px;background:transparent;color:var(--text);font-size:12px;min-height:30px}
 .experience{padding:8px 14px 15px;gap:12px;color:var(--accent);font-size:8px}.experience progress{height:8px;--stat-color:var(--accent)}
 #milestone{margin:0 11px 10px;padding:12px 13px;background:linear-gradient(110deg,var(--raised),var(--panel));border-color:var(--border);border-radius:10px}
@@ -91,6 +85,32 @@ dialog{border-color:var(--border);background:var(--panel);color:var(--text);box-
 #pet-picker-message{font-size:12px;color:var(--muted);line-height:1.5;min-height:18px;text-align:center}.secondary-button{width:100%;border:1px solid var(--border);border-radius:8px;background:var(--raised);padding:12px}
 #preview-banner{margin:0 auto 14px;text-align:center;font-size:11px;color:var(--muted)}
 .settings-description{font-size:12px;line-height:1.6;color:var(--muted)}ul.settings-description{padding-left:20px}.settings-description li+li{margin-top:8px}
-@media(max-width:370px){body{padding:12px 8px}.device{padding:14px 10px 6px}.brand{font-size:6px}.brand b{font-size:8px}header{gap:5px}#pet-picker-open{font-size:9px;padding:5px}.habitat{height:245px}.pet{width:225px;height:225px}.orbit{width:230px;height:230px}.screen-top{font-size:7px;padding-inline:6px}.actions{gap:5px}.actions button{font-size:10px}.stat{padding:8px}}
-
+@media(max-width:370px){body{padding:12px 8px}.device{padding:14px 10px 6px}.brand{font-size:6px}.brand b{font-size:8px}header{gap:5px}#pet-picker-open{font-size:9px;padding:5px}.habitat{height:245px}.pet{width:225px;height:225px}.screen-top{font-size:7px;padding-inline:6px}.actions{gap:5px}.actions button{font-size:10px}.stat{padding:8px}}
 #notification-settings{margin:16px 0;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--panel)}#notification-settings h2{font-size:16px}#reminder-types{border:0;padding:0;margin:16px 0}#reminder-types legend{font-size:12px;margin-bottom:8px}#reminder-types label{display:flex;align-items:center;gap:10px;min-height:44px;font-size:13px}#reminder-types input{width:20px;height:20px;accent-color:var(--accent)}
+/* Species scenes: pixel-art backdrop, mood lighting and a light particle layer. */
+body[data-species="cat"]{--scene:url(/assets/scenes/cat.webp)}
+body[data-species="fox"]{--scene:url(/assets/scenes/fox.webp)}
+body[data-species="snow_leopard"]{--scene:url(/assets/scenes/snow_leopard.webp)}
+.habitat,.habitat[data-mood="happy"]{background:none}
+.scene{position:absolute;inset:0;z-index:-2;background:var(--scene) center 60%/cover no-repeat;image-rendering:pixelated;opacity:0;transition:opacity .4s ease,filter .8s ease}
+.habitat[data-mood] .scene{opacity:1}
+.scene:after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 40% 45% at 50% 62%,color-mix(in srgb,var(--glow) 16%,transparent),transparent 70%),radial-gradient(ellipse 55% 60% at 50% 55%,color-mix(in srgb,var(--screen) 40%,transparent),transparent 75%),linear-gradient(var(--screen),transparent 18%,transparent 80%,var(--screen))}
+.habitat[data-mood="sleeping"] .scene{filter:brightness(.5) saturate(.7)}
+.habitat[data-mood="tired"] .scene{filter:brightness(.72) saturate(.85)}
+.habitat[data-mood="dirty"] .scene,.habitat[data-mood="lonely"] .scene{filter:brightness(.85) saturate(.75)}
+.habitat[data-mood="happy"] .scene{filter:brightness(1.1) saturate(1.12)}
+.particles{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;opacity:.8;transition:opacity .8s ease}
+.habitat[data-mood="happy"] .particles{opacity:1}
+.habitat[data-mood="sleeping"] .particles{opacity:.35}
+.habitat:not([data-mood]) .particles{opacity:0}
+.particles:before,.particles:after{content:'';position:absolute;left:0;right:0;top:-240px;bottom:0}
+body[data-species="snow_leopard"] .particles:before{background-image:radial-gradient(circle,#fff 0 1.6px,transparent 2.2px),radial-gradient(circle,#d8ecff 0 1.2px,transparent 1.8px);background-size:90px 120px,70px 80px;background-position:12px 18px,47px 52px;animation:fall 10s linear infinite}
+body[data-species="snow_leopard"] .particles:after{background-image:radial-gradient(circle,#e6f4ff 0 1px,transparent 1.5px);background-size:60px 48px;background-position:20px 9px;opacity:.55;animation:fall 18s linear infinite}
+body[data-species="fox"] .particles:before{background-image:radial-gradient(ellipse 3.5px 2.2px,#e8792f 85%,transparent),radial-gradient(ellipse 3px 2px,#c9502a 85%,transparent);background-size:120px 120px,150px 80px;background-position:30px 20px,95px 60px;animation:fall 16s linear infinite}
+body[data-species="fox"] .particles:after{top:0;background-image:radial-gradient(circle,#ffe39a 0 1.4px,#ffb34766 2.4px,transparent 5px),radial-gradient(circle,#ffd47a 0 1.2px,#ffa63a55 2.2px,transparent 4.5px);background-size:140px 95px,110px 130px;background-position:40px 50px,90px 15px;-webkit-mask-image:linear-gradient(transparent 30%,#000 55%);mask-image:linear-gradient(transparent 30%,#000 55%);animation:twinkle 3.2s ease-in-out infinite alternate}
+body[data-species="cat"] .particles:before,body[data-species="cat"] .particles:after{top:0;-webkit-mask-image:linear-gradient(#000 35%,transparent 60%);mask-image:linear-gradient(#000 35%,transparent 60%)}
+body[data-species="cat"] .particles:before{background-image:radial-gradient(circle,#fff2c9 0 1.3px,transparent 2px),radial-gradient(circle,#e2c8ff 0 1px,transparent 1.6px);background-size:110px 70px,80px 55px;background-position:25px 12px,62px 35px;animation:twinkle 2.6s ease-in-out infinite alternate}
+body[data-species="cat"] .particles:after{background-image:radial-gradient(circle,#ffffff 0 1.1px,transparent 1.7px);background-size:95px 60px;background-position:70px 28px;animation:twinkle 3.4s ease-in-out -1.7s infinite alternate}
+@keyframes fall{to{transform:translateY(240px)}}
+@keyframes twinkle{from{opacity:.25}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.particles:before,.particles:after{animation:none}.scene{transition:none}}

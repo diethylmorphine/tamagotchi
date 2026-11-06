@@ -20,6 +20,10 @@ const path = require('node:path');
       await page.locator('.pet').evaluate(image => image.decode());
       await page.emulateMedia({reducedMotion: 'reduce'});
       assert.equal(await page.locator('body').getAttribute('data-species'), species);
+      // Each species has its own backdrop, and the image actually loads.
+      const scene = await page.locator('.scene').evaluate(element => getComputedStyle(element).backgroundImage);
+      assert.match(scene, new RegExp(`/assets/scenes/${species}\.webp`));
+      assert.equal(await page.evaluate(async url => (await fetch(url)).ok, `/assets/scenes/${species}.webp`), true);
       await page.screenshot({path: path.join(output, `${species}-screen.png`), fullPage: true});
     }
     await page.getByRole('button', {name: 'Выбрать питомца', exact: true}).click();
