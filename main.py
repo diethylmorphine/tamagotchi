@@ -1,4 +1,6 @@
+import hashlib
 import logging
+import re
 import secrets
 import unicodedata
 from datetime import UTC, datetime
@@ -10,7 +12,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.types import Update
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -24,12 +26,46 @@ from backend.telegram_setup import configure_telegram, webhook_status
 
 app = FastAPI(title="Tamagotchi-Fawn API", version="0.1.0")
 FRONTEND = Path(__file__).parent / "frontend"
-app.mount("/assets", StaticFiles(directory=FRONTEND / "assets"), name="assets")
+ASSETS = FRONTEND / "assets"
+ASSET_URL = re.compile(r"/assets/[\w./-]+\.\w+")
+
+
+def asset_version(directory: Path = ASSETS) -> str:
+    """Content hash of every frontend asset; changes whenever any asset changes."""
+    digest = hashlib.sha256()
+    for path in sorted(directory.rglob("*")):
+        if path.is_file():
+            digest.update(path.relative_to(directory).as_posix().encode())
+            digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
+
+
+# Telegram's in-app browser can keep stale CSS/JS across releases, so every asset URL
+# carries the release's content hash and the entry points are always revalidated.
+ASSET_VERSION = asset_version()
+
+
+def versioned(text: str) -> str:
+    return ASSET_URL.sub(lambda match: f"{match.group()}?v={ASSET_VERSION}", text)
+
+
+INDEX_HTML = versioned((FRONTEND / "index.html").read_text(encoding="utf-8"))
+STYLE_CSS = versioned((ASSETS / "style.css").read_text(encoding="utf-8"))
+REVALIDATE = {"Cache-Control": "no-cache"}
 
 
 @app.get("/", include_in_schema=False)
 async def index():
-    return FileResponse(FRONTEND / "index.html")
+    return Response(INDEX_HTML, media_type="text/html", headers=REVALIDATE)
+
+
+# Registered before the static mount so the stylesheet's own asset URLs are versioned too.
+@app.get("/assets/style.css", include_in_schema=False)
+async def stylesheet():
+    return Response(STYLE_CSS, media_type="text/css", headers=REVALIDATE)
+
+
+app.mount("/assets", StaticFiles(directory=ASSETS), name="assets")
 
 
 @app.get("/api/health")

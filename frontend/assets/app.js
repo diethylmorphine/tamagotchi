@@ -6,6 +6,8 @@ if (telegram?.isVersionAtLeast?.('6.1')) {
   telegram.setBackgroundColor('#0c0918');
 }
 const $ = selector => document.querySelector(selector);
+// The page loads this module as app.js?v=<release>; sprites reuse that version to skip stale caches.
+const ASSET_QUERY = new URL(import.meta.url).search;
 const SPECIES = {
   cat: {alt: 'Фиолетовый кот', edition: '01', background: '#100b1c', previewName: 'Луна'},
   fox: {alt: 'Рыжая лиса', edition: '02', background: '#170e09', previewName: 'Мейпл'},
@@ -86,7 +88,7 @@ function render(value) {
     telegram.setBackgroundColor(background);
   }
   $('#pet-edition').textContent = 'VIRTUAL PET / ' + look.edition;
-  $('#pet-picker-icon').src = '/assets/pets/' + species + '-calm.webp';
+  $('#pet-picker-icon').src = '/assets/pets/' + species + '-calm.webp' + ASSET_QUERY;
   for (const button of speciesButtons) {
     const selected = button.dataset.species === species;
     button.setAttribute('aria-pressed', String(selected));
@@ -98,7 +100,7 @@ function render(value) {
   $('#xp-bar').value = pet.xp % 100;
   const mood = Object.hasOwn(moods, pet.mood) ? pet.mood : 'calm';
   const emotion = {sleeping: 'sleeping', hungry: 'hungry', tired: 'calm', dirty: 'grumpy', lonely: 'sad', happy: 'happy', calm: 'calm'}[mood];
-  $('.pet').src = '/assets/pets/' + species + '-' + emotion + '.webp';
+  $('.pet').src = '/assets/pets/' + species + '-' + emotion + '.webp' + ASSET_QUERY;
   $('.pet').alt = look.alt + ' — ' + moods[mood][0];
   $('.habitat').dataset.mood = mood;
   $('#mood-symbol').textContent = moods[mood][1];
