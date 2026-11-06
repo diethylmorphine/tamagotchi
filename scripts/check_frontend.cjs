@@ -126,7 +126,10 @@ const path = require('node:path');
       pet = {...pet, mood, cooldown_seconds: mood === 'sleeping' ? 120 : 0,
         sleep_remaining_seconds: mood === 'sleeping' ? 120 : 0};
       await live.reload();
-      await live.waitForFunction(expected => document.querySelector('.pet').src.endsWith(expected),
+      await live.waitForFunction(expected => {
+        const url = new URL(document.querySelector('.pet').src);
+        return url.pathname.endsWith(expected) && /^\?v=\w+$/.test(url.search);
+      },
         `fox-${sprite}.webp`);
       await live.locator('.pet').evaluate(image => image.decode());
       if (mood === 'sleeping') assert.equal(await live.locator('[data-action="feed"]').isDisabled(), true);
