@@ -21,7 +21,7 @@ class Pet(BaseModel):
     owner_username: str | None = None
     name: str = "Питомец"
     name_chosen: bool = False
-    species: Literal["cat", "fox"] = "cat"
+    species: Literal["cat", "fox", "snow_leopard"] = "cat"
     satiety: float = Field(default=80, ge=0, le=100)
     happiness: float = Field(default=80, ge=0, le=100)
     energy: float = Field(default=80, ge=0, le=100)

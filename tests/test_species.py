@@ -47,6 +47,36 @@ def test_species_switch_preserves_progress_sleep_and_name():
         app.dependency_overrides.clear()
 
 
+def test_snow_leopard_can_be_selected_and_round_trips():
+    class Repository:
+        pet = Pet(telegram_id=7, name="Ирма", xp=250, version=2, updated_at=datetime.now(UTC))
+
+        async def get_or_create(self, user_id):
+            return self.pet
+
+        async def save(self, pet, previous_version):
+            assert previous_version == self.pet.version
+            self.pet = pet
+            return True
+
+    repo = Repository()
+    app.dependency_overrides[telegram_user] = lambda: 7
+    app.dependency_overrides[repository] = lambda: repo
+    try:
+        with TestClient(app) as client:
+            response = client.patch("/api/pet/species", json={"species": "snow_leopard"})
+            assert response.status_code == 200
+            assert response.json()["species"] == "snow_leopard"
+            data = client.get("/api/pet").json()
+            assert data["species"] == "snow_leopard"
+            assert (data["name"], data["xp"]) == ("Ирма", 250)
+            back = client.patch("/api/pet/species", json={"species": "cat"})
+            assert back.json()["species"] == "cat"
+            assert client.patch("/api/pet/species", json={"species": "irbis"}).status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_species_retries_from_fresh_state_after_conflict():
     class Repository:
         pet = Pet(telegram_id=7, updated_at=datetime.now(UTC))
