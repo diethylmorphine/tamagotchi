@@ -6,8 +6,13 @@ if (telegram?.isVersionAtLeast?.('6.1')) {
   telegram.setBackgroundColor('#0c0918');
 }
 const $ = selector => document.querySelector(selector);
+const SPECIES = {
+  cat: {alt: 'Фиолетовый кот', edition: '01', background: '#100b1c', previewName: 'Луна'},
+  fox: {alt: 'Рыжая лиса', edition: '02', background: '#170e09', previewName: 'Мейпл'},
+  snow_leopard: {alt: 'Снежный ирбис', edition: '03', background: '#0a1018', previewName: 'Ирма'},
+};
 const previewSpecies = new URLSearchParams(location.search).get('preview');
-const preview = !telegram?.initData && ['cat', 'fox'].includes(previewSpecies);
+const preview = !telegram?.initData && Object.hasOwn(SPECIES, previewSpecies);
 const labels = {satiety: ['Сытость', '#e9a95e'], happiness: ['Настроение', '#eb85cb'], energy: ['Энергия', '#a98af2'], hygiene: ['Чистота', '#6dd6e5']};
 const moods = {
   sleeping: ['Тихо… набираюсь сил во сне', 'z Z'],
@@ -71,15 +76,16 @@ function openName() {
 }
 function render(value) {
   pet = value;
-  const species = pet.species === 'fox' ? 'fox' : 'cat';
+  const species = Object.hasOwn(SPECIES, pet.species) ? pet.species : 'cat';
+  const look = SPECIES[species];
   document.body.dataset.species = species;
-  const background = species === 'fox' ? '#170e09' : '#100b1c';
+  const background = look.background;
   document.querySelector('meta[name="theme-color"]').content = background;
   if (telegram?.isVersionAtLeast?.('6.1')) {
     telegram.setHeaderColor(background);
     telegram.setBackgroundColor(background);
   }
-  $('#pet-edition').textContent = 'VIRTUAL PET / ' + (species === 'fox' ? '02' : '01');
+  $('#pet-edition').textContent = 'VIRTUAL PET / ' + look.edition;
   $('#pet-picker-icon').src = '/assets/pets/' + species + '-calm.webp';
   for (const button of speciesButtons) {
     const selected = button.dataset.species === species;
@@ -93,7 +99,7 @@ function render(value) {
   const mood = Object.hasOwn(moods, pet.mood) ? pet.mood : 'calm';
   const emotion = {sleeping: 'sleeping', hungry: 'hungry', tired: 'calm', dirty: 'grumpy', lonely: 'sad', happy: 'happy', calm: 'calm'}[mood];
   $('.pet').src = '/assets/pets/' + species + '-' + emotion + '.webp';
-  $('.pet').alt = (species === 'fox' ? 'Рыжая лиса' : 'Фиолетовый кот') + ' — ' + moods[mood][0];
+  $('.pet').alt = look.alt + ' — ' + moods[mood][0];
   $('.habitat').dataset.mood = mood;
   $('#mood-symbol').textContent = moods[mood][1];
   $('#pet-mood').textContent = moods[mood][0];
@@ -421,12 +427,12 @@ $('#admin-editor').addEventListener('submit', event => {
 setInterval(sync, 1000);
 if (preview) {
   $('#preview-banner').hidden = false;
-  render({species: previewSpecies, name: previewSpecies === 'fox' ? 'Мейпл' : 'Луна',
+  render({species: previewSpecies, name: SPECIES[previewSpecies].previewName,
     needs_name: false, level: 7, xp: 664, mood: 'calm', current_title: 'Друзья',
     next_milestone: {title: 'Неразлучные', level: 10, xp_remaining: 236},
     stats: {satiety: 82, happiness: 94, hygiene: 76, energy: 48},
     cooldown_seconds: 0, sleep_remaining_seconds: 0, can_wake: false});
-  status = 'Превью · выбери кота или лису кнопкой слева сверху';
+  status = 'Превью · выбери питомца кнопкой слева сверху';
   sync();
 } else if (telegram?.initData) {
   run();
