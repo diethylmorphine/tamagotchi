@@ -13,6 +13,7 @@ This is a short history of shipped milestones. Current setup and behavior are do
 
 - Added the snow leopard (ирбис) as a third selectable species with its own cool grey-blue theme. Apply migration `0010_snow_leopard.sql` before deploying.
 - Gave each pet its own pixel-art scene behind it: a night room for the cat, an autumn forest at sunset for the fox, and snowy peaks under the aurora for the snow leopard. Stars twinkle, leaves and snow fall, and the scene dims while the pet sleeps.
+- Added the green snake (змейка) as a fourth species with an emerald theme and a twilight rainforest scene with fireflies and drifting leaves. Apply migration `0011_snake.sql` before deploying.
 
 ## Current limitations
 

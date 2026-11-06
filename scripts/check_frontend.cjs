@@ -15,7 +15,7 @@ const path = require('node:path');
     await page.route('https://telegram.org/**', route => route.fulfill({body: ''}));
     const output = path.resolve('output/preview');
     await fs.mkdir(output, {recursive: true});
-    for (const species of ['fox', 'cat', 'snow_leopard']) {
+    for (const species of ['fox', 'cat', 'snow_leopard', 'snake']) {
       await page.goto(`http://127.0.0.1:8000/?preview=${species}`);
       await page.locator('.pet').evaluate(image => image.decode());
       await page.emulateMedia({reducedMotion: 'reduce'});
@@ -34,6 +34,10 @@ const path = require('node:path');
     await page.locator('.pet-options [data-species="snow_leopard"]').click();
     assert.equal(await page.locator('body').getAttribute('data-species'), 'snow_leopard');
     assert.match(await page.locator('.pet').getAttribute('alt'), /Снежный ирбис/);
+    await page.getByRole('button', {name: 'Выбрать питомца', exact: true}).click();
+    await page.locator('.pet-options [data-species="snake"]').click();
+    assert.equal(await page.locator('body').getAttribute('data-species'), 'snake');
+    assert.match(await page.locator('.pet').getAttribute('alt'), /Зелёная змейка/);
     for (const width of [320, 375, 430, 768]) {
       await page.setViewportSize({width, height: 900});
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

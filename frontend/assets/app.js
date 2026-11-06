@@ -12,6 +12,7 @@ const SPECIES = {
   cat: {alt: 'Фиолетовый кот', edition: '01', background: '#100b1c', previewName: 'Луна'},
   fox: {alt: 'Рыжая лиса', edition: '02', background: '#170e09', previewName: 'Мейпл'},
   snow_leopard: {alt: 'Снежный ирбис', edition: '03', background: '#0a1018', previewName: 'Ирма'},
+  snake: {alt: 'Зелёная змейка', edition: '04', background: '#08130e', previewName: 'Мята'},
 };
 const previewSpecies = new URLSearchParams(location.search).get('preview');
 const preview = !telegram?.initData && Object.hasOwn(SPECIES, previewSpecies);
