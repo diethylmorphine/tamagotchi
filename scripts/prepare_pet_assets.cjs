@@ -15,9 +15,9 @@ const emotions = ['calm', 'happy', 'sleeping', 'sad', 'hungry', 'grumpy'];
     if (!await fs.access(source).then(() => true, () => false)) { console.log(`skip ${species}: no atlas`); continue; }
     const {width, height, hasAlpha} = await sharp(source).metadata();
     if (!hasAlpha || width !== height) throw new Error('Unexpected atlas format');
-    // Generated columns have small differences in spacing; cuts stay in empty gutters.
+    // Atlases are laid out in even thirds; cuts stay in the empty gutters.
     const unit = width / 1254; // Cut positions below were measured on 1254px atlases.
-    const columns = (species === 'cat' ? [0, 433, 840, 1254] : [0, 418, 836, 1254]).map(x => Math.round(x * unit));
+    const columns = [0, 418, 836, 1254].map(x => Math.round(x * unit));
     const pieces = [];
     for (let index = 0; index < 6; index++) {
       const col = index % 3;
