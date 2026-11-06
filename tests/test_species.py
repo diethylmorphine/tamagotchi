@@ -77,6 +77,33 @@ def test_snow_leopard_can_be_selected_and_round_trips():
         app.dependency_overrides.clear()
 
 
+def test_snake_can_be_selected_and_round_trips():
+    class Repository:
+        pet = Pet(telegram_id=7, name="Мята", xp=120, version=1, updated_at=datetime.now(UTC))
+
+        async def get_or_create(self, user_id):
+            return self.pet
+
+        async def save(self, pet, previous_version):
+            assert previous_version == self.pet.version
+            self.pet = pet
+            return True
+
+    repo = Repository()
+    app.dependency_overrides[telegram_user] = lambda: 7
+    app.dependency_overrides[repository] = lambda: repo
+    try:
+        with TestClient(app) as client:
+            response = client.patch("/api/pet/species", json={"species": "snake"})
+            assert response.status_code == 200
+            data = client.get("/api/pet").json()
+            assert data["species"] == "snake"
+            assert (data["name"], data["xp"]) == ("Мята", 120)
+            assert client.patch("/api/pet/species", json={"species": "python"}).status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_species_retries_from_fresh_state_after_conflict():
     class Repository:
         pet = Pet(telegram_id=7, updated_at=datetime.now(UTC))

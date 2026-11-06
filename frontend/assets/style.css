@@ -2,6 +2,7 @@
 :root{--page:#100b1c;--screen:#171023;--panel:#21182e;--raised:#352442;--button:#7750a5;--track:#392946;--text:#f1e2ff;--muted:#bea5d0;--accent:#c595f5;--border:#795692;--shell-light:#4d355f;--shell:#291e36;--shell-dark:#1d1428;--glow:#a466e5;--highlight:#bf87e3;--food:#e9a95e;--joy:#dc8bbd;--energy:#b297eb;--clean:#86c8c0}
 body[data-species="fox"]{--page:#170e09;--screen:#1c110b;--panel:#2b1b12;--raised:#42291b;--button:#975a2d;--track:#4b3222;--text:#ffe5bc;--muted:#c49b78;--accent:#ffaf5d;--border:#875535;--shell-light:#74462d;--shell:#3d271b;--shell-dark:#24160f;--glow:#db7e2a;--highlight:#be7b4e;--food:#ed9b62;--joy:#f2c16a;--energy:#edac50;--clean:#b1bd88}
 body[data-species="snow_leopard"]{--page:#0a1018;--screen:#0f1824;--panel:#162232;--raised:#223349;--button:#4a6f93;--track:#26374c;--text:#e6f1fb;--muted:#9db3c8;--accent:#8cc8f0;--border:#4a6a88;--shell-light:#3a566f;--shell:#1d2d3d;--shell-dark:#121d29;--glow:#5aa6dc;--highlight:#7fa6c6;--food:#e3a977;--joy:#d9c2e8;--energy:#8fb0ee;--clean:#7fd0cc}
+body[data-species="snake"]{--page:#08130e;--screen:#0d1a13;--panel:#14261c;--raised:#1f3829;--button:#3f8a57;--track:#223a2b;--text:#e4f7e8;--muted:#9cc2a6;--accent:#7fe08f;--border:#3f7350;--shell-light:#335c40;--shell:#1a3022;--shell-dark:#102017;--glow:#4fcf6a;--highlight:#79b886;--food:#e7b46a;--joy:#e6d36a;--energy:#8fc9e8;--clean:#6fd6c3}
 #sleep-description{font-size:14px;line-height:1.6;color:var(--muted)}
 #confirm-sleep,#cancel-sleep{display:block;width:100%;border-radius:7px;padding:12px;border:1px solid var(--border);background:var(--button);font-weight:500}
 #cancel-sleep{margin-top:8px;border-color:transparent;background:transparent;color:var(--muted)}
@@ -91,6 +92,7 @@ dialog{border-color:var(--border);background:var(--panel);color:var(--text);box-
 body[data-species="cat"]{--scene:url(/assets/scenes/cat.webp)}
 body[data-species="fox"]{--scene:url(/assets/scenes/fox.webp)}
 body[data-species="snow_leopard"]{--scene:url(/assets/scenes/snow_leopard.webp)}
+body[data-species="snake"]{--scene:url(/assets/scenes/snake.webp)}
 .habitat,.habitat[data-mood="happy"]{background:none}
 .scene{position:absolute;inset:0;z-index:-2;background:var(--scene) center 60%/cover no-repeat;image-rendering:pixelated;opacity:0;transition:opacity .4s ease,filter .8s ease}
 .habitat[data-mood] .scene{opacity:1}
@@ -111,6 +113,8 @@ body[data-species="fox"] .particles:after{top:0;background-image:radial-gradient
 body[data-species="cat"] .particles:before,body[data-species="cat"] .particles:after{top:0;-webkit-mask-image:linear-gradient(#000 35%,transparent 60%);mask-image:linear-gradient(#000 35%,transparent 60%)}
 body[data-species="cat"] .particles:before{background-image:radial-gradient(circle,#fff2c9 0 1.3px,transparent 2px),radial-gradient(circle,#e2c8ff 0 1px,transparent 1.6px);background-size:110px 70px,80px 55px;background-position:25px 12px,62px 35px;animation:twinkle 2.6s ease-in-out infinite alternate}
 body[data-species="cat"] .particles:after{background-image:radial-gradient(circle,#ffffff 0 1.1px,transparent 1.7px);background-size:95px 60px;background-position:70px 28px;animation:twinkle 3.4s ease-in-out -1.7s infinite alternate}
+body[data-species="snake"] .particles:before{top:0;background-image:radial-gradient(circle,#e8ff9a 0 1.4px,#b6f25a66 2.4px,transparent 5px),radial-gradient(circle,#c8ff8a 0 1.2px,#7fe08f55 2.2px,transparent 4.5px);background-size:130px 100px,105px 140px;background-position:35px 40px,85px 10px;animation:twinkle 2.8s ease-in-out infinite alternate}
+body[data-species="snake"] .particles:after{background-image:radial-gradient(ellipse 3.5px 2.2px,#5fbf4a 85%,transparent),radial-gradient(ellipse 3px 2px,#8fd65a 85%,transparent);background-size:130px 140px,160px 90px;background-position:20px 30px,100px 70px;opacity:.7;animation:fall 20s linear infinite}
 @keyframes fall{to{transform:translateY(240px)}}
 @keyframes twinkle{from{opacity:.25}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.particles:before,.particles:after{animation:none}.scene{transition:none}}

@@ -9,7 +9,7 @@ const emotions = ['calm', 'happy', 'sleeping', 'sad', 'hungry', 'grumpy'];
 (async () => {
   const destination = path.join(root, 'frontend/assets/pets');
   await fs.mkdir(destination, {recursive: true});
-  for (const species of ['fox', 'cat', 'snow_leopard']) {
+  for (const species of ['fox', 'cat', 'snow_leopard', 'snake']) {
     const source = path.join(root, `output/pet-emotions/${species}-atlas.png`);
     // A species without a generated atlas keeps its current sprites.
     if (!await fs.access(source).then(() => true, () => false)) { console.log(`skip ${species}: no atlas`); continue; }

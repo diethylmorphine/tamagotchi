@@ -292,7 +292,7 @@ class NameRequest(BaseModel):
 
 class SpeciesRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    species: Literal["cat", "fox", "snow_leopard"]
+    species: Literal["cat", "fox", "snow_leopard", "snake"]
 
 
 @app.patch("/api/pet/species")
