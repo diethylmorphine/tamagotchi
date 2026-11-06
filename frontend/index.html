@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#0c0918">
 <title>Tamagotchi-Fawn | Tamagotchi FWN</title>
 <link rel="stylesheet" href="/assets/style.css">
+<link rel="prefetch" href="/assets/scenes/cat.webp" as="image">
+<link rel="prefetch" href="/assets/scenes/fox.webp" as="image">
+<link rel="prefetch" href="/assets/scenes/snow_leopard.webp" as="image">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script type="module" src="/assets/app.js"></script>
 </head>
@@ -19,10 +22,9 @@
 <p id="bond-title" hidden></p>
 <div class="habitat">
 <span id="mood-symbol" aria-hidden="true"></span>
-<span class="star s1">✦</span><span class="star s2">+</span><span class="star s3">✧</span><span class="star s4">+</span>
-<div class="orbit"></div>
+<div class="scene" aria-hidden="true"></div>
+<div class="particles" aria-hidden="true"></div>
 <img class="pet" src="/assets/pets/cat-calm.webp" alt="Фиолетовый пиксельный кот" width="240" height="240">
-<div class="habitat-plants" aria-hidden="true"><span>⌁</span><span>⌁</span></div>
 <div class="pet-shadow"></div><div class="floor"></div>
 </div>
 <p id="pet-mood" role="status" hidden></p>
