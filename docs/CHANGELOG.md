@@ -9,6 +9,10 @@ This is a short history of shipped milestones. Current setup and behavior are do
 - Added administrator tools for reviewing player pets and updating levels or stats.
 - Added per-category reminder preferences and Telegram bot menu controls.
 
+## November 2026
+
+- Added the snow leopard (ирбис) as a third selectable species with its own cool grey-blue theme. The six mood sprites are placeholders until final art is added. Apply migration `0010_snow_leopard.sql` before deploying.
+
 ## Current limitations
 
 - Inventory, shop, quests, and economy are planned, not implemented.
