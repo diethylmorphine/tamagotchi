@@ -14,15 +14,16 @@ const emotions = ['calm', 'happy', 'sleeping', 'sad', 'hungry', 'grumpy'];
     // A species without a generated atlas keeps its current sprites.
     if (!await fs.access(source).then(() => true, () => false)) { console.log(`skip ${species}: no atlas`); continue; }
     const {width, height, hasAlpha} = await sharp(source).metadata();
-    if (!hasAlpha || width !== 1254 || height !== 1254) throw new Error('Unexpected atlas format');
+    if (!hasAlpha || width !== height) throw new Error('Unexpected atlas format');
     // Generated columns have small differences in spacing; cuts stay in empty gutters.
-    const columns = species === 'cat' ? [0, 433, 840, width] : [0, 418, 836, width];
+    const unit = width / 1254; // Cut positions below were measured on 1254px atlases.
+    const columns = (species === 'cat' ? [0, 433, 840, 1254] : [0, 418, 836, 1254]).map(x => Math.round(x * unit));
     const pieces = [];
     for (let index = 0; index < 6; index++) {
       const col = index % 3;
       const cell = await sharp(source).extract({
-        left: columns[col], top: index < 3 ? 0 : 627,
-        width: columns[col + 1] - columns[col], height: 627,
+        left: columns[col], top: index < 3 ? 0 : Math.round(627 * unit),
+        width: columns[col + 1] - columns[col], height: Math.round(627 * unit),
       }).png().toBuffer();
       const {data, info} = await sharp(cell)
         .trim({background: '#00000000', threshold: 20}).png().toBuffer({resolveWithObject: true});

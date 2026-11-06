@@ -30,7 +30,7 @@ Moods and friendship titles (roadmap A1-A2), timed sleep, cat and fox species, l
 | 5 | No-penalty streaks | Bonus rewards for consecutive days; a missed day costs nothing, which fits the soft-care rule | S | Idea 1 |
 | 6 | Webhook dedup by `update_id` | Fixes repeated `/start` handling (known limitation) | S | None |
 | 7 | Rate limiting and error monitoring | Safer to grow the user base (known limitation) | M | None |
-| 8 | Add the snow leopard (ирбис) as a pet species | A new selectable mountain-dwelling companion | M | Six mood sprites and a visual theme; extend the species model and picker. **Status: implemented on branch `feat/snow-leopard` with placeholder sprites; final art still needed.** |
+| 8 | Add the snow leopard (ирбис) as a pet species | A new selectable mountain-dwelling companion | M | Six mood sprites and a visual theme; extend the species model and picker. **Status: implemented on branch `feat/snow-leopard` with generated sprites. |
 
 ## Suggested order
 
